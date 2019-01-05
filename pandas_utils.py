@@ -78,3 +78,36 @@ def list_column_to_mutliple_columns(s):
     :return df: Pandas dataframe with multiple columns, one per unique item in all lists.
     """
     return pd.get_dummies(s.apply(pd.Series).stack()).sum(level=0)
+
+def jupyter_plot_interactive_correlation_to_label_col(df, label_col):
+    """
+    Plot (interactive  jupyter NB) correlation vector of label column to all other columns.
+    Correlation value obtained using spearman rank test.
+    
+    :param df: Pandas dataframe
+    :label_col: Label column for which we find correlation to all other columns.
+    :return corr: Dataframe containing 2 columns: one for correlation values obtained 
+                  using Pearson Rho test and one with Spearman Rank test.
+    :return corr_slider: Jupyter widgets.FloatSlider ranging from 0.0 to 1.0 to control interactive view.
+    """
+    # Get Pearson correlation - to describe extent of linear correlation with label
+    pearson = df.corr(method="pearson")[label_col].rename("pearson")
+
+    # Get Spearman rank correlation - to describe extent of any monotonic relationship with label
+    spearman = df.corr(method="spearman")[label_col].rename("spearman")
+
+    corr = pd.concat([pearson, spearman], axis=1)
+
+    def view_correlations(corr_strength=0.0):
+        if corr_strength == 0.0: return corr
+        return display(corr.where((abs(corr.spearman) > corr_strength) & (corr.spearman != 1)).dropna())
+
+    def view_n_correlations(corr_strength=0.0):
+        x = corr.where((abs(corr.spearman) > corr_strength) & (corr.spearman != 1)).dropna()
+        return x.shape[0]
+
+    corr_slider = widgets.FloatSlider(value=0.0, min=0.0, max=1.0, step=0.0001)
+    interact(view_n_correlations, corr_strength=corr_slider)
+    interactive(view_correlations, corr_strength=corr_slider)
+    
+    return corr, corr_slider
