@@ -1,4 +1,5 @@
 import pandas as pd
+import matplotlib.pyplot as plt
 
 def df_mem_usage(df):
     """ Calculate memory usage of pandas dataframe """
@@ -111,3 +112,20 @@ def jupyter_plot_interactive_correlation_to_label_col(df, label_col):
     interactive(view_correlations, corr_strength=corr_slider)
     
     return corr, corr_slider
+
+def plot_corr(df, size=10, method="spearman"):
+    """Function plots a graphical correlation matrix for each pair of columns in the dataframe.
+
+    Input:
+        df: pandas DataFrame
+        size: vertical and horizontal size of the plot
+        method: correlation test method
+    """
+
+    corr = df.corr(method=method)
+    fig, ax = plt.subplots(figsize=(size, size))
+    im = ax.matshow(corr)
+    plt.xticks(range(len(corr.columns)), corr.columns, rotation=90)
+    plt.yticks(range(len(corr.columns)), corr.columns)
+    plt.colorbar(im)
+    plt.show()
