@@ -77,4 +77,4 @@ def list_column_to_mutliple_columns(s):
     :param s: List column pandas series
     :return df: Pandas dataframe with multiple columns, one per unique item in all lists.
     """
-    return pd.get_dummies(s['commercialsegments'].apply(pd.Series).stack()).sum(level=0)
+    return pd.get_dummies(s.apply(pd.Series).stack()).sum(level=0)
