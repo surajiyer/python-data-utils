@@ -80,6 +80,17 @@ def list_column_to_mutliple_columns(s):
     """
     return pd.get_dummies(s.apply(pd.Series).stack()).sum(level=0)
 
+def get_missingness_perc(df):
+    """
+    Get a percentage of missing values per column in input dataframe.
+    :param df: Input pandas dataframe
+    :return missingness: Pandas dataframe with index as columns from df and values 
+                         as missingness level of corresponding column.
+    """
+    missingness = pd.DataFrame([(len(df[c])-df[c].count())*100.00/len(df[c]) for c in df], 
+                               index=df.columns, columns=['Missingness %'])
+    return missingness
+
 def jupyter_plot_interactive_correlation_to_label_col(df, label_col):
     """
     Plot (interactive  jupyter NB) correlation vector of label column to all other columns.
