@@ -1,5 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import ipywidgets as widgets
+from ipywidgets import interactive, interact
 
 def df_mem_usage(df):
     """ Calculate memory usage of pandas dataframe """
