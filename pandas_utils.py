@@ -8,6 +8,7 @@ import time
 import shutil
 import os
 import errno
+from sklearn.utils import resample
 from progressbar.bar import ProgressBar
 # from imblearn.over_sampling import smote
 
