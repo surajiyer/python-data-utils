@@ -44,7 +44,7 @@ def df_mem_usage(df):
 
     return result
 
-def optimize_dataframe(df, categorical=[], always_positive_ints=[], verbose=False):
+def optimize_dataframe(df, categorical=[], always_positive_ints=[], cat_nunique_ratio=.5, verbose=False):
     """
     Optimize the memory usage of the given dataframe by modifying data types.
     :param df: pandas DataFrame
@@ -77,11 +77,11 @@ def optimize_dataframe(df, categorical=[], always_positive_ints=[], verbose=Fals
     cols = getCols('float')
     df.loc[:, cols] = df[cols].apply(pd.to_numeric, downcast='float')
 
-    # convert object columns with less than 50% unique values to categorical
+    # convert object columns with less than {cat_nunique_ratio}% unique values to categorical
     for col in getCols('object'):
         num_unique_values = len(df[col].unique())
         num_total_values = len(df[col])
-        if num_unique_values / float(num_total_values) < 0.5:
+        if num_unique_values / float(num_total_values) < cat_nunique_ratio:
             df.loc[:, col] = df[col].astype('category')
 
     # convert given columns to categorical
