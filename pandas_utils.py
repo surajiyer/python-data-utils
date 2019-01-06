@@ -5,6 +5,7 @@ import ipywidgets as widgets
 from ipywidgets import interactive, interact
 import six
 import time
+import dill
 import shutil
 import os
 import errno
