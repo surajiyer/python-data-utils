@@ -113,18 +113,16 @@ def jupyter_plot_interactive_correlation_to_label_col(df, label_col):
     corr = pd.concat([pearson, spearman], axis=1)
 
     def view_correlations(corr_strength=0.0):
-        if corr_strength == 0.0: return corr
-        return display(corr.where((abs(corr.spearman) > corr_strength) & (corr.spearman != 1)).dropna())
-
-    def view_n_correlations(corr_strength=0.0):
-        x = corr.where((abs(corr.spearman) > corr_strength) & (corr.spearman != 1)).dropna()
-        return x.shape[0]
+        if corr_strength == 0.0: x = corr
+        else: x = corr.where((abs(corr.spearman) > corr_strength) & (corr.spearman != 1)).dropna()
+        display(x.shape[0])
+        display(x)
+        return x
 
     corr_slider = widgets.FloatSlider(value=0.0, min=0.0, max=1.0, step=0.0001)
-    interact(view_n_correlations, corr_strength=corr_slider)
-    interactive(view_correlations, corr_strength=corr_slider)
+    w = interactive(view_correlations, corr_strength=corr_slider)
     
-    return corr, corr_slider
+    return corr, corr_slider, w
 
 def plot_corr(df, size=10, method="spearman"):
     """Function plots a graphical correlation matrix for each pair of columns in the dataframe.
