@@ -1,5 +1,6 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+from IPython.display import display
 import ipywidgets as widgets
 from ipywidgets import interactive, interact
 
