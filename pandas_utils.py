@@ -335,10 +335,13 @@ def plot_corr(df, size=10, method="spearman"):
     plt.colorbar(im)
     plt.show()
 
-def np_to_pd(X):
+def np_to_pd(X, columns=None):
     if isinstance(X, pd.DataFrame):
         return X
     elif isinstance(X, pd.np.ndarray):
+        if columns:
+            assert len(columns) == len(X[0])
+            return pd.DataFrame(X, columns=columns)
         return pd.DataFrame(X, columns=['var_{}'.format(k) for k in range(pd.np.atleast_2d(X).shape[1])])
     else:
         raise ValueError('Input X must be a numpy array')
