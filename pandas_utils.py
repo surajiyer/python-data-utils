@@ -52,11 +52,13 @@ def optimize_dataframe(df, categorical=[], always_positive_ints=[], cat_nunique_
         List of categorical variables with boolean representing if they are ordered or not.
     :param always_positive_ints: list of str, optional (default=[])
         List of always positive INTEGER variables
+    :param cat_nunique_ratio: 0.0 <= float <= 1.0, (default=0.5)
+        Ratio of unique values to total values. Used for detecting cateogrical columns.
     :param verbose: bool, optional (default=False)
         Print before and after memory usage
     :return df: pandas DataFrame
     """
-    cat = [] if len(categorical) == 0 else list(zip(*categorical))
+    cat = [] if len(categorical) == 0 else list(zip(*categorical))[0]
     getCols = lambda dtype: df.columns[df.dtypes == dtype].difference(always_positive_ints).difference(cat)
 
     if verbose:
