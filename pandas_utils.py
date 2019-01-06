@@ -1,3 +1,12 @@
+# coding: utf-8
+
+"""
+    description: Pandas utility functions and classes
+    author: Suraj Iyer
+"""
+
+from __future__ import print_function
+
 import pandas as pd
 import matplotlib.pyplot as plt
 from IPython.display import display
