@@ -80,7 +80,7 @@ def optimize_dataframe(df, categorical=[], always_positive_ints=[], cat_nunique_
     # convert object columns with less than {cat_nunique_ratio}% unique values to categorical
     for col in getCols('object'):
         num_unique_values = len(df[col].unique())
-        num_total_values = len(df[col])
+        num_total_values = len(df[col].dropna())
         if num_unique_values / float(num_total_values) < cat_nunique_ratio:
             df.loc[:, col] = df[col].astype('category')
 
