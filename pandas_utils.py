@@ -360,3 +360,22 @@ def balanced_sampling(df_minority, df_majority, minority_upsampling_ratio=0.2, o
         df_majority = resample(df_majority, replace=False, n_samples=new_size, random_state=0)
     df = pd.concat([df_minority, df_majority])
     return df
+
+def hist_group_by(df, by, figsize=(20, 20), ncols=4):
+    """
+    Plot histograms for every variable in :param df: grouped by :param by:.
+    
+    :param df: Pandas DataFrame
+    :param by: See documentation on Pandas.groupBy(by=...).
+    :param figsize: See documentation on matplotlib.figure(figsize=...).
+    :param ncols: Number of histogram plots in one row. One plot per variable.
+    """
+    grps = df.groupby(by)
+    f = plt.figure(figsize=figsize)
+    nrows = len(df.columns)//ncols + (1 if len(df.columns) % ncols != 0 else 0)
+    for i, c in enumerate(df.columns):
+        ax = f.add_subplot(nrows, 4, i+1)
+        grps[c].hist(bins=25, alpha=0.4, label=c, ax=ax)
+        ax.set_title(c)
+        ax.legend(loc='upper right')
+    f.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
