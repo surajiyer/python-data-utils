@@ -20,6 +20,7 @@ import os
 import errno
 from sklearn.utils import resample
 from progressbar.bar import ProgressBar
+from pandas.plotting import scatter_matrix
 # from imblearn.over_sampling import smote
 
 
@@ -318,7 +319,7 @@ def jupyter_plot_interactive_correlation_to_label_col(df, label_col):
     
     return corr, corr_slider, w
 
-def plot_corr(df, size=10, method="spearman"):
+def feature_corr_matrix(df, size=10, method="spearman"):
     """Function plots a graphical correlation matrix for each pair of columns in the dataframe.
 
     Input:
@@ -335,11 +336,14 @@ def plot_corr(df, size=10, method="spearman"):
     plt.colorbar(im)
     plt.show()
 
+def feature_corr_matrix_compact(df, method="spearman"):
+    plt.matshow(df.corr(method=method));
+
 def np_to_pd(X, columns=None):
     if isinstance(X, pd.DataFrame):
         return X
     elif isinstance(X, pd.np.ndarray):
-        if columns:
+        if columns is not None:
             assert len(columns) == len(X[0])
             return pd.DataFrame(X, columns=columns)
         return pd.DataFrame(X, columns=['var_{}'.format(k) for k in range(pd.np.atleast_2d(X).shape[1])])
@@ -361,7 +365,13 @@ def balanced_sampling(df_minority, df_majority, minority_upsampling_ratio=0.2, o
     df = pd.concat([df_minority, df_majority])
     return df
 
-def hist_group_by(df, by, figsize=(20, 20), ncols=4):
+def feature_distributions_hist(df, figsize=(20, 20)):
+    df.hist(figsize=figsize);
+
+def feature_distributions_boxplot(df, figsize=(20, 5)):
+    df.boxplot(rot=90, figsize=figsize);
+
+def feature_class_relationship(df, by, figsize=(20, 20), ncols=4):
     """
     Plot histograms for every variable in :param df: grouped by :param by:.
     
@@ -375,7 +385,25 @@ def hist_group_by(df, by, figsize=(20, 20), ncols=4):
     nrows = len(df.columns)//ncols + (1 if len(df.columns) % ncols != 0 else 0)
     for i, c in enumerate(df.columns):
         ax = f.add_subplot(nrows, 4, i+1)
-        grps[c].hist(bins=25, alpha=0.4, label=c, ax=ax)
+        for k, v in grps:
+            ax.hist(v[c], label=k, bins=25, alpha=0.4)
+#         grps[c].hist(bins=25, alpha=0.4, ax=ax)
         ax.set_title(c)
         ax.legend(loc='upper right')
-    f.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+    f.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0);
+
+def feature_feature_relationship(df, figsize=(20, 20)):
+    sm = scatter_matrix(df+0.00001*pd.np.random.rand(*df.shape), alpha=0.2, figsize=figsize, diagonal='kde')
+
+    #Change label rotation
+    [s.xaxis.label.set_rotation(90) for s in sm.reshape(-1)]
+    [s.yaxis.label.set_rotation(0) for s in sm.reshape(-1)]
+
+    #May need to offset label when rotating to prevent overlap of figure
+    [s.get_yaxis().set_label_coords(-0.3,0.5) for s in sm.reshape(-1)]
+
+    #Hide all ticks
+    [s.set_xticks(()) for s in sm.reshape(-1)]
+    [s.set_yticks(()) for s in sm.reshape(-1)]
+
+    plt.show()
