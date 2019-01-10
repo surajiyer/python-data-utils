@@ -8,7 +8,9 @@
 from __future__ import print_function
 
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 from IPython.display import display
 import ipywidgets as widgets
 from ipywidgets import interactive, interact
@@ -21,6 +23,7 @@ import errno
 from sklearn.utils import resample
 from progressbar.bar import ProgressBar
 from pandas.plotting import scatter_matrix
+from statsmodels.graphics.factorplots import interaction_plot
 # from imblearn.over_sampling import smote
 
 
@@ -88,9 +91,16 @@ def optimize_dataframe(df, categorical=[], always_positive_ints=[], cat_nunique_
             df.loc[:, col] = df[col].astype('category')
 
     # convert given columns to categorical
-    for col, ord in categorical:
+    for col, prop in categorical:
         if col in df.columns and df.dtypes[col].name != 'category':
-            df.loc[:, col] = df[col].astype('category', ordered=ord)
+            if isinstance(prop, (list, tuple)):
+                df.loc[:, col] = df[col].astype('category', ordered=prop[0], categories=prop[1])
+            elif isinstance(prop, dict):
+                df.loc[:, col] = df[col].astype('category', ordered=prop['ordered'], categories=prop['categories'])
+            elif isinstance(prop, bool):
+                df.loc[:, col] = df[col].astype('category', ordered=prop)
+            else:
+                raise ValueError('Categorical variable {} ill-specified.'.format(col))
 
     if verbose:
         print('After:', df_mem_usage(df))
@@ -339,14 +349,31 @@ def feature_corr_matrix(df, size=10, method="spearman"):
 def feature_corr_matrix_compact(df, method="spearman"):
     plt.matshow(df.corr(method=method));
 
+def feature_corr_matrix_sns(df, method="spearman"):
+    corr = df.corr(method=method)
+    
+    # Generate a mask for the upper triangle
+    mask = np.ones_like(corr, dtype=np.bool)
+    mask[np.triu_indices_from(mask)] = False
+
+    # Set up the matplotlib figure
+    f, ax = plt.subplots(figsize=(11, 9))
+
+    # Generate a custom diverging colormap
+    cmap = sns.diverging_palette(220, 10, as_cmap=True)
+
+    # Draw the heatmap with the mask and correct aspect ratio
+    sns.heatmap(corr, mask=mask, cmap=cmap, vmax=.3, center=0, 
+                square=True, linewidths=.5, cbar_kws={"shrink": .5});
+
 def np_to_pd(X, columns=None):
     if isinstance(X, pd.DataFrame):
         return X
-    elif isinstance(X, pd.np.ndarray):
+    elif isinstance(X, np.ndarray):
         if columns is not None:
             assert len(columns) == len(X[0])
             return pd.DataFrame(X, columns=columns)
-        return pd.DataFrame(X, columns=['var_{}'.format(k) for k in range(pd.np.atleast_2d(X).shape[1])])
+        return pd.DataFrame(X, columns=['var_{}'.format(k) for k in range(np.atleast_2d(X).shape[1])])
     else:
         raise ValueError('Input X must be a numpy array')
 
@@ -393,7 +420,7 @@ def feature_class_relationship(df, by, figsize=(20, 20), ncols=4):
     f.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0);
 
 def feature_feature_relationship(df, figsize=(20, 20)):
-    sm = scatter_matrix(df+0.00001*pd.np.random.rand(*df.shape), alpha=0.2, figsize=figsize, diagonal='kde')
+    sm = scatter_matrix(df+0.00001*np.random.rand(*df.shape), alpha=0.2, figsize=figsize, diagonal='kde')
 
     #Change label rotation
     [s.xaxis.label.set_rotation(90) for s in sm.reshape(-1)]
@@ -407,3 +434,18 @@ def feature_feature_relationship(df, figsize=(20, 20)):
     [s.set_yticks(()) for s in sm.reshape(-1)]
 
     plt.show()
+
+def feature_feature_relationship_one(df, col1, col2, by=lambda x: True):
+    i = 0; colors=list('rbgym')
+    for name, g in df.groupby(by):
+        plt.scatter(g[col1], g[col2], label=name, edgecolors='k', alpha=.2, color=colors[i]); i += 1
+    plt.xlabel(col1)
+    plt.ylabel(col2)
+    plt.legend(loc="upper right")
+    plt.show()
+
+def categorical_interaction_plot(df, col1, col2, by):
+    fig, ax = plt.subplots(figsize=(6, 6))
+    fig = interaction_plot(x=df[col1], trace=df[by], response=df[col2], 
+                           colors=['red', 'blue'], markers=['D', '^'], ms=10, ax=ax)
+    fig.show()
