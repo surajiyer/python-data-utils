@@ -79,6 +79,30 @@ def cross_validate(clf, X, y, scorer, cv, fit_params=None):
         print("")
     return scores
 
+def visualize_RF_feature_importances(forest_model, features, k_features=10):
+    """
+    :param forest_model: RandomForest model object
+    :param k_features: int, 1 <= k_features <= n (n = total number of features)
+        Top-k features will be displayed.
+    """
+    importances = forest_model.feature_importances_[:10]
+    std = np.std([tree.feature_importances_ for tree in forest_model.estimators_], 
+                 axis=0)
+    indices = np.argsort(importances)[::-1]
+
+    # Print the feature ranking
+    print("Feature ranking:")
+    for f in range(10):
+        print("%d. %s (%f)" % (f + 1, features[f], importances[indices[f]]))
+
+    # Plot the feature importances of the forest
+    plt.figure()
+    plt.title("Feature importances")
+    plt.bar(range(10), importances[indices], yerr=std[indices], color="r", align="center")
+    plt.xticks(range(10), indices)
+    plt.xlim([-1, 10])
+    plt.show()
+
 ###############################################################################
 # SKLEARN PIPELINE FUNCTIONS
 ###############################################################################
