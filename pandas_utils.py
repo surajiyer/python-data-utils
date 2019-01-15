@@ -320,7 +320,7 @@ def jupyter_plot_interactive_correlation_to_label_col(df, label_col):
     def view_correlations(corr_strength=0.0):
         if corr_strength == 0.0: x = corr
         else: x = corr.where((abs(corr.spearman) > corr_strength) & (corr.spearman != 1)).dropna()
-        display(x.shape[0])
+        print('N: {}'.format(x.shape[0]))
         display(x)
         return x
 
@@ -460,11 +460,12 @@ def drop_duplicates(df, columns):
         Note that output will still include all other columns.
     :return df: dataframe with duplicates acros all :columns: dropped.
     '''
+    display(df.head())
     df['check_string'] = df.apply(lambda row: ''.join(sorted([row[c] for c in columns])), axis=1)
     df = df.drop_duplicates('check_string')
     return df.drop('check_string', axis=1)
 
-def check_MAR_vs_MCAR(df, corr_method='spearman', jupyter_nb=False):
+def nullity_correlation(df, corr_method='spearman', jupyter_nb=False, fill_na=-1):
     df_ = df.copy()
 
     # add a new column for every variable to indicate missingness
@@ -472,19 +473,18 @@ def check_MAR_vs_MCAR(df, corr_method='spearman', jupyter_nb=False):
         df_['{}_is_missing'.format(c)] = df_[c].isna()
 
     # check correlation between each variable and indicator
-    corr = df_.corr(method=corr_method)
-    
-    # delete the columns without the 'is_missing'
-    cols = [c for c in corr if 'is_missing' in c]
-    corr = corr[cols]
+    corr = df_.fillna(fill_na).corr(method=corr_method)
     
     # reshaping the correlation matrix
     corr = corr.stack().reset_index()
     corr.columns = ['col1', 'col2', 'value']
-    corr = corr[corr.col1 != corr.col2]
-    corr['value_abs'] = corr.value.apply(np.abs)
+    
+    # delete the left-right matching columns (since they are 100% correlated) 
+    # and right-side columns without the 'is_missing'
+    corr = corr[(corr.col1 != corr.col2) & (corr.col2.apply(lambda x: 'is_missing' in x))]
     
     # sort descending based on value column
+    corr['value_abs'] = corr.value.apply(np.abs)
     corr = corr.dropna().sort_values(by='value_abs', ascending=False).drop(['value_abs'], axis=1)
     corr = drop_duplicates(corr, ['col1', 'col2']).reset_index(drop=True)
     
@@ -492,7 +492,7 @@ def check_MAR_vs_MCAR(df, corr_method='spearman', jupyter_nb=False):
         def view_correlations(corr_strength=0.0):
             if corr_strength == 0.0: x = corr
             else: x = corr.where(abs(corr.value) > corr_strength).dropna()
-            display(x.shape[0])
+            print('N: {}'.format(x.shape[0]))
             display(x)
             return x
 
@@ -502,3 +502,6 @@ def check_MAR_vs_MCAR(df, corr_method='spearman', jupyter_nb=False):
         return corr, corr_slider, w
     
     return corr
+
+def missingness_heatmap(df):
+    return sns.heatmap(df.isnull(), cbar=False)
