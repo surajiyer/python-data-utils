@@ -449,3 +449,56 @@ def categorical_interaction_plot(df, col1, col2, by):
     fig = interaction_plot(x=df[col1], trace=df[by], response=df[col2], 
                            colors=['red', 'blue'], markers=['D', '^'], ms=10, ax=ax)
     fig.show()
+
+def drop_duplicates(df, columns):
+    '''
+    Drop duplicate rows based on unique values from combination of given columns.
+    
+    :param df: dataframe
+    :param columns: list of str
+        Keeps unique combinations of values across given columns and drops remaining.
+        Note that output will still include all other columns.
+    :return df: dataframe with duplicates acros all :columns: dropped.
+    '''
+    df['check_string'] = df.apply(lambda row: ''.join(sorted([row[c] for c in columns])), axis=1)
+    df = df.drop_duplicates('check_string')
+    return df.drop('check_string', axis=1)
+
+def check_MAR_vs_MCAR(df, corr_method='spearman', jupyter_nb=False):
+    df_ = df.copy()
+
+    # add a new column for every variable to indicate missingness
+    for c in df_:
+        df_['{}_is_missing'.format(c)] = df_[c].isna()
+
+    # check correlation between each variable and indicator
+    corr = df_.corr(method=corr_method)
+    
+    # delete the columns without the 'is_missing'
+    cols = [c for c in corr if 'is_missing' in c]
+    corr = corr[cols]
+    
+    # reshaping the correlation matrix
+    corr = corr.stack().reset_index()
+    corr.columns = ['col1', 'col2', 'value']
+    corr = corr[corr.col1 != corr.col2]
+    corr['value_abs'] = corr.value.apply(np.abs)
+    
+    # sort descending based on value column
+    corr = corr.dropna().sort_values(by='value_abs', ascending=False).drop(['value_abs'], axis=1)
+    corr = drop_duplicates(corr, ['col1', 'col2']).reset_index(drop=True)
+    
+    if jupyter_nb:
+        def view_correlations(corr_strength=0.0):
+            if corr_strength == 0.0: x = corr
+            else: x = corr.where(abs(corr.value) > corr_strength).dropna()
+            display(x.shape[0])
+            display(x)
+            return x
+
+        corr_slider = widgets.FloatSlider(value=0.0, min=0.0, max=1.0, step=0.0001)
+        w = interactive(view_correlations, corr_strength=corr_slider)
+        
+        return corr, corr_slider, w
+    
+    return corr
