@@ -94,11 +94,13 @@ def optimize_dataframe(df, categorical=[], always_positive_ints=[], cat_nunique_
     for col, prop in categorical:
         if col in df.columns and df.dtypes[col].name != 'category':
             if isinstance(prop, (list, tuple)):
-                df.loc[:, col] = df[col].astype('category', ordered=prop[0], categories=prop[1])
+                df.loc[:, col] = df[col].astype(pd.api.types.CategoricalDtype(categories=prop[1], 
+                                                                              ordered=prop[0]))
             elif isinstance(prop, dict):
-                df.loc[:, col] = df[col].astype('category', ordered=prop['ordered'], categories=prop['categories'])
+                df.loc[:, col] = df[col].astype(pd.api.types.CategoricalDtype(categories=prop['categories'], 
+                                                                              ordered=prop['ordered']))
             elif isinstance(prop, bool):
-                df.loc[:, col] = df[col].astype('category', ordered=prop)
+                df.loc[:, col] = df[col].astype(pd.api.types.CategoricalDtype(ordered=prop))
             else:
                 raise ValueError('Categorical variable {} ill-specified.'.format(col))
 
@@ -460,7 +462,6 @@ def drop_duplicates(df, columns):
         Note that output will still include all other columns.
     :return df: dataframe with duplicates acros all :columns: dropped.
     '''
-    display(df.head())
     df['check_string'] = df.apply(lambda row: ''.join(sorted([row[c] for c in columns])), axis=1)
     df = df.drop_duplicates('check_string')
     return df.drop('check_string', axis=1)
@@ -481,7 +482,9 @@ def nullity_correlation(df, corr_method='spearman', jupyter_nb=False, fill_na=-1
     
     # delete the left-right matching columns (since they are 100% correlated) 
     # and right-side columns without the 'is_missing'
-    corr = corr[(corr.col1 != corr.col2) & (corr.col2.apply(lambda x: 'is_missing' in x))]
+    corr = corr[(corr.col1 != corr.col2) 
+                & (corr.col2.apply(lambda x: 'is_missing' in x)) 
+                & (corr.apply(lambda row: not(row['col1'] in row['col2'])))]
     
     # sort descending based on value column
     corr['value_abs'] = corr.value.apply(np.abs)
