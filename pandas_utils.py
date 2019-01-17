@@ -10,6 +10,7 @@ from __future__ import print_function
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
 from IPython.display import display
 import ipywidgets as widgets
@@ -437,12 +438,20 @@ def feature_feature_relationship(df, figsize=(20, 20)):
 
     plt.show()
 
-def feature_feature_relationship_one(df, col1, col2, by=lambda x: True):
+def feature_feature_relationship_one(df, cols, by=lambda x: True):
+    assert 1 < len(cols) <= 3, 'Number of columns must equal 2 or 3 dimensions.'
     i = 0; colors=list('rbgym')
+    fig = plt.figure()
+    if len(cols) == 3:
+        ax = fig.add_subplot(111, projection='3d')
+    else:
+        ax = fig.add_subplot(111)
     for name, g in df.groupby(by):
-        plt.scatter(g[col1], g[col2], label=name, edgecolors='k', alpha=.2, color=colors[i]); i += 1
-    plt.xlabel(col1)
-    plt.ylabel(col2)
+        ax.scatter(*[g[c] for c in cols], label=name, edgecolors='k', alpha=.2, color=colors[i]); i += 1
+    ax.set_xlabel(cols[0])
+    ax.set_ylabel(cols[1])
+    if len(cols) == 3:
+        ax.set_zlabel(cols[2])
     plt.legend(loc="upper right")
     plt.show()
 
@@ -484,7 +493,7 @@ def nullity_correlation(df, corr_method='spearman', jupyter_nb=False, fill_na=-1
     # and right-side columns without the 'is_missing'
     corr = corr[(corr.col1 != corr.col2) 
                 & (corr.col2.apply(lambda x: 'is_missing' in x)) 
-                & (corr.apply(lambda row: not(row['col1'] in row['col2'])))]
+                & (corr.apply(lambda row: not(row['col1'] in row['col2'] or row['col2'] in row['col1']), axis=1))]
     
     # sort descending based on value column
     corr['value_abs'] = corr.value.apply(np.abs)
