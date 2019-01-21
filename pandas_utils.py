@@ -27,6 +27,13 @@ from pandas.plotting import scatter_matrix
 from statsmodels.graphics.factorplots import interaction_plot
 # from imblearn.over_sampling import smote
 
+plt.style.use('seaborn') # pretty matplotlib plots
+# plt.rc('font', size=12)
+# plt.rc('figure', titlesize=18)
+# plt.rc('axes', labelsize=15)
+# plt.rc('axes', titlesize=18)
+# plt.rc('figure', autolayout=True)
+
 
 def df_mem_usage(df):
     """ Calculate memory usage of pandas dataframe """
@@ -347,10 +354,14 @@ def feature_corr_matrix(df, size=10, method="spearman"):
     plt.xticks(range(len(corr.columns)), corr.columns, rotation=90)
     plt.yticks(range(len(corr.columns)), corr.columns)
     plt.colorbar(im)
-    plt.show()
+    return fig
 
 def feature_corr_matrix_compact(df, method="spearman"):
-    plt.matshow(df.corr(method=method));
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    im = ax.matshow(df.corr(method=method));
+    fig.colorbar(im)
+    return fig
 
 def feature_corr_matrix_sns(df, method="spearman"):
     corr = df.corr(method=method)
@@ -366,8 +377,8 @@ def feature_corr_matrix_sns(df, method="spearman"):
     cmap = sns.diverging_palette(220, 10, as_cmap=True)
 
     # Draw the heatmap with the mask and correct aspect ratio
-    sns.heatmap(corr, mask=mask, cmap=cmap, vmax=.3, center=0, 
-                square=True, linewidths=.5, cbar_kws={"shrink": .5});
+    return sns.heatmap(corr, mask=mask, cmap=cmap, vmax=.3, center=0, ax=ax,
+                       square=True, linewidths=.5, cbar_kws={"shrink": .5})
 
 def np_to_pd(X, columns=None):
     if isinstance(X, pd.DataFrame):
@@ -396,10 +407,10 @@ def balanced_sampling(df_minority, df_majority, minority_upsampling_ratio=0.2, o
     return df
 
 def feature_distributions_hist(df, figsize=(20, 20)):
-    df.hist(figsize=figsize);
+    return df.hist(figsize=figsize)
 
 def feature_distributions_boxplot(df, figsize=(20, 5)):
-    df.boxplot(rot=90, figsize=figsize);
+    return df.boxplot(rot=90, figsize=figsize)
 
 def feature_class_relationship(df, by, figsize=(20, 20), ncols=4):
     """
@@ -414,29 +425,31 @@ def feature_class_relationship(df, by, figsize=(20, 20), ncols=4):
     f = plt.figure(figsize=figsize)
     nrows = len(df.columns)//ncols + (1 if len(df.columns) % ncols != 0 else 0)
     for i, c in enumerate(df.columns):
-        ax = f.add_subplot(nrows, 4, i+1)
+        ax = f.add_subplot(nrows, ncols, i+1)
         for k, v in grps:
             ax.hist(v[c], label=k, bins=25, alpha=0.4)
 #         grps[c].hist(bins=25, alpha=0.4, ax=ax)
         ax.set_title(c)
         ax.legend(loc='upper right')
-    f.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0);
+    f.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
+    plt.close()
+    return f
 
 def feature_feature_relationship(df, figsize=(20, 20)):
     sm = scatter_matrix(df+0.00001*np.random.rand(*df.shape), alpha=0.2, figsize=figsize, diagonal='kde')
 
-    #Change label rotation
+    # change label rotation
     [s.xaxis.label.set_rotation(90) for s in sm.reshape(-1)]
     [s.yaxis.label.set_rotation(0) for s in sm.reshape(-1)]
 
-    #May need to offset label when rotating to prevent overlap of figure
+    # may need to offset label when rotating to prevent overlap of figure
     [s.get_yaxis().set_label_coords(-0.3,0.5) for s in sm.reshape(-1)]
 
-    #Hide all ticks
+    # hide all ticks
     [s.set_xticks(()) for s in sm.reshape(-1)]
     [s.set_yticks(()) for s in sm.reshape(-1)]
 
-    plt.show()
+    return sm
 
 def feature_feature_relationship_one(df, cols, by=lambda x: True):
     assert 1 < len(cols) <= 3, 'Number of columns must equal 2 or 3 dimensions.'
@@ -453,13 +466,15 @@ def feature_feature_relationship_one(df, cols, by=lambda x: True):
     if len(cols) == 3:
         ax.set_zlabel(cols[2])
     plt.legend(loc="upper right")
-    plt.show()
+    plt.close()
+    return fig
 
-def categorical_interaction_plot(df, col1, col2, by):
-    fig, ax = plt.subplots(figsize=(6, 6))
+def categorical_interaction_plot(df, col1, col2, by, figsize=(6, 6)):
+    fig, ax = plt.subplots(figsize=figsize)
     fig = interaction_plot(x=df[col1], trace=df[by], response=df[col2], 
                            colors=['red', 'blue'], markers=['D', '^'], ms=10, ax=ax)
-    fig.show()
+    plt.close()
+    return fig
 
 def drop_duplicates(df, columns):
     '''
@@ -517,3 +532,23 @@ def nullity_correlation(df, corr_method='spearman', jupyter_nb=False, fill_na=-1
 
 def missingness_heatmap(df):
     return sns.heatmap(df.isnull(), cbar=False)
+
+def linearity_with_logodds(df, col, label_col, ax=None):
+    df_ = pd.pivot_table(df, columns=[label_col]
+                         , index=[col]
+                         , aggfunc={label_col: len}
+                         , fill_value=0)
+    df_['Odds(1)'] = df_[(label_col, 1.0)] /  df_[(label_col, 0.0)]
+    df_['LogOdds(1)'] = np.log(1+df_['Odds(1)'])
+    df_ = df_.reset_index()
+    return df_.plot.line(col, "LogOdds(1)", ax=ax)
+
+def linearity_with_logodds_allcols(df, label_col, figsize=(30, 80), ncols=4):
+    fig = plt.figure(figsize=figsize)
+    n = len(df.columns)-1  # minus 1 because we discount label column
+    nrows = n//ncols + (1 if n % ncols != 0 else 0)
+    for i, c in enumerate(df.columns.difference([label_col])):
+        ax = fig.add_subplot(nrows, ncols, i+1)
+        linearity_with_logodds(df, c, label_col, ax=ax);
+    plt.tight_layout()
+    return fig
