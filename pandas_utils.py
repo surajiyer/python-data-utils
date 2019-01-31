@@ -25,6 +25,7 @@ from sklearn.utils import resample
 from progressbar.bar import ProgressBar
 from pandas.plotting import scatter_matrix
 from statsmodels.graphics.factorplots import interaction_plot
+import re
 # from imblearn.over_sampling import smote
 
 plt.style.use('seaborn') # pretty matplotlib plots
@@ -363,12 +364,17 @@ def feature_corr_matrix_compact(df, method="spearman"):
     fig.colorbar(im)
     return fig
 
-def feature_corr_matrix_sns(df, method="spearman"):
+def feature_corr_matrix_sns(df, method="spearman", upsidedown=False):
     corr = df.corr(method=method)
     
     # Generate a mask for the upper triangle
-    mask = np.ones_like(corr, dtype=np.bool)
-    mask[np.triu_indices_from(mask)] = False
+    if not upsidedown:
+        mask = np.ones_like(corr, dtype=np.bool)
+        mask[np.triu_indices_from(mask)] = False
+    else:
+        # Generate a mask for the lower triangle
+        mask = np.zeros_like(corr, dtype=np.bool)
+        mask[np.triu_indices_from(mask)] = True
 
     # Set up the matplotlib figure
     f, ax = plt.subplots(figsize=(11, 9))
@@ -377,8 +383,14 @@ def feature_corr_matrix_sns(df, method="spearman"):
     cmap = sns.diverging_palette(220, 10, as_cmap=True)
 
     # Draw the heatmap with the mask and correct aspect ratio
-    return sns.heatmap(corr, mask=mask, cmap=cmap, vmax=.3, center=0, ax=ax,
-                       square=True, linewidths=.5, cbar_kws={"shrink": .5})
+    x = sns.heatmap(corr, mask=mask, cmap=cmap, center=0, ax=ax,
+                    square=True, linewidths=.5, cbar_kws={"shrink": .5})
+    
+    if upsidedown:
+        for i, t in enumerate(ax.get_yticklabels()):
+            t.set_rotation(180)
+
+    return x
 
 def np_to_pd(X, columns=None):
     if isinstance(X, pd.DataFrame):
@@ -490,12 +502,22 @@ def drop_duplicates(df, columns):
     df = df.drop_duplicates('check_string')
     return df.drop('check_string', axis=1)
 
+def add_NA_indicator_variables(df, copy=True):
+    """
+    Add indicator variables for each column to indicate missingness.
+    """
+    df_ = df.copy() if copy else df
+    for i, c in enumerate(df_.columns):
+        x = df_[c].isna()
+        if x.any():
+            df_.insert(i+1, '{}_NA'.format(c), x)
+    return df_
+
 def nullity_correlation(df, corr_method='spearman', jupyter_nb=False, fill_na=-1):
     df_ = df.copy()
 
-    # add a new column for every variable to indicate missingness
-    for c in df_:
-        df_['{}_is_missing'.format(c)] = df_[c].isna()
+    # add missingness indicator variables
+    df_ = add_NA_indicator_variables(df, copy=False)
 
     # check correlation between each variable and indicator
     corr = df_.fillna(fill_na).corr(method=corr_method)
@@ -507,7 +529,7 @@ def nullity_correlation(df, corr_method='spearman', jupyter_nb=False, fill_na=-1
     # delete the left-right matching columns (since they are 100% correlated) 
     # and right-side columns without the 'is_missing'
     corr = corr[(corr.col1 != corr.col2) 
-                & (corr.col2.apply(lambda x: 'is_missing' in x)) 
+                & (corr.col2.apply(lambda x: 'NA' in x)) 
                 & (corr.apply(lambda row: not(row['col1'] in row['col2'] or row['col2'] in row['col1']), axis=1))]
     
     # sort descending based on value column
@@ -552,3 +574,8 @@ def linearity_with_logodds_allcols(df, label_col, figsize=(30, 80), ncols=4):
         linearity_with_logodds(df, c, label_col, ax=ax);
     plt.tight_layout()
     return fig
+
+def cleanhtml(raw_html):
+    cleanr = re.compile('<.*?>')
+    cleantext = re.sub(cleanr, '', raw_html)
+    return cleantext
