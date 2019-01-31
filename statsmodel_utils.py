@@ -277,7 +277,7 @@ def logit_params_summary(results, alpha=0.05, alphas=np.array([0.1, 0.05, 0.01, 
 	                      , margeff
 	                      , results.tvalues
 	                      , results.pvalues
-	                      , *conf_int.values.reshape(conf_int.columns.shape[0], -1)
+	                      , *conf_int.values.T
 	                      , results.pvalues.apply(lambda x: '*'*np.sum(x < alphas))))
 	             , columns=['Coef.', 'OddsRat.', 'Std.Err.', 'ME', 'z', 'P>|z|', '[{}'.format(alpha/2), '{}]'.format(1-(alpha/2)), 'Sign.']
 	             , index=conf_int.index)
