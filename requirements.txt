@@ -13,3 +13,6 @@ tqdm
 imbalanced-learn
 fancyimpute
 pandas-profiling
+plotly
+jupyterlab
+nbconvert
