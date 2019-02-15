@@ -10,6 +10,7 @@ from __future__ import print_function
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import statsmodels as statsm
 import statsmodels.formula.api as smf
@@ -258,9 +259,8 @@ def logit_evaluation_summary(results, labels, pos=1, neg=0):
 		, ('Squared Pearson Correlation R-squared', squared_pearson_correlation_r2(results, labels, pos, neg))
 		, ('Sum-of-squares R-squared', sum_of_squares_r2(results, labels, pos, neg))])
 
-def logit_params_summary(results, alpha=0.05, alphas=np.array([0.1, 0.05, 0.01, 0.001]), intercept_col='intercept'):
+def logit_params_summary(results, alpha=0.05, alphas=np.array([0.1, 0.05, 0.01, 0.001]), margeff_kwargs={}):
 	assert all(isinstance(a, float) for a in alphas), 'ValueError: alphas.'
-	assert isinstance(intercept_col, str)
 
 	# get confidenc intervals for coefficients
 	conf_int = results.conf_int(alpha)
@@ -269,7 +269,7 @@ def logit_params_summary(results, alpha=0.05, alphas=np.array([0.1, 0.05, 0.01, 
 	constant_cols_idx = np.argwhere(np.apply_along_axis(lambda x: np.unique(x).shape[0] == 1, 0, results.model.exog) == True).ravel()
 
 	# get and adjust marginal effects table by adding nans for columns with constant values
-	margeff = np.insert(results.get_margeff().margeff, constant_cols_idx, np.nan)
+	margeff = np.insert(results.get_margeff(**margeff_kwargs).margeff, constant_cols_idx, np.nan)
 
 	return pd.DataFrame(list(zip(results.params
 	                      , np.exp(results.params)
@@ -282,12 +282,88 @@ def logit_params_summary(results, alpha=0.05, alphas=np.array([0.1, 0.05, 0.01, 
 	             , columns=['Coef.', 'OddsRat.', 'Std.Err.', 'ME', 'z', 'P>|z|', '[{}'.format(alpha/2), '{}]'.format(1-(alpha/2)), 'Sign.']
 	             , index=conf_int.index)
 
-def logit_summary(results, alpha=0.05, labels=None, pos=1, neg=0):
+def logit_summary(results, alpha=0.05, labels=None, pos=1, neg=0, margeff_kwargs={}):
 	summary = results.summary2()
 	summary.tables.pop(1)
-	summary.add_df(logit_params_summary(results, alpha), float_format='%.3f')
+	summary.add_df(logit_params_summary(results, alpha, margeff_kwargs=margeff_kwargs), float_format='%.3f')
 	summary.add_text('Significance level: *: p < 0.1; **: p < 0.05; ***: p < 0.01; ****: p < 0.001')
 	if labels is not None:
 		summary.add_df(logit_evaluation_summary(results, labels, pos, neg), 
 			header=False, index=False, float_format='%.3f')
 	return summary
+
+def plot_coefficients(model, ci=95):
+    """
+    Plots coefficients and their confidence intervals for a statsmodels OLS/Logit
+    model. Based on (but heavily modified and simplified) 
+    seaborn's now deprecated coefplot.
+    See https://github.com/mwaskom/seaborn/blob/master/seaborn/regression.py
+
+    Args:
+        model: statsmodels OLS model
+            model whose params and confidence intervals to plot
+        ci: float, optional
+            size of confidence intervals
+
+    Returns:
+
+    """
+    # Get basic information to prepare the plot
+    alpha = 1 - ci / 100
+    coefs = model.params
+    cis = model.conf_int(alpha)
+    n_terms = len(coefs)
+
+    # Figure out the dimensions of the plot
+    h, w = mpl.rcParams["figure.figsize"]
+    f, ax = plt.subplots(1, 1, figsize=(
+    n_terms * (1 / 2), n_terms * (h / (4 * (n_terms / 5)))))
+    for i, term in enumerate(coefs.index):
+        low, high = cis.loc[term]
+        ax.plot([low, high], [i, i], solid_capstyle="round", lw=2.5,
+                color='black')
+        ax.plot(coefs.loc[term], i, "o", ms=8, color='black')
+    ax.set_ylim(-.5, n_terms - .5)
+    ax.set_yticks(range(n_terms))
+    coef_names = coefs.index.values
+    ax.set_yticklabels(coef_names)
+    plt.setp(ax.get_xticklabels(), rotation=90)
+
+def plot_logit_marginal_effects(results, ci=95):
+    """
+    Plots coefficients and their confidence intervals for a statsmodels logit
+    model. Based on (but heavily modified and simplified) 
+    seaborn's now deprecated coefplot.
+    See https://github.com/mwaskom/seaborn/blob/master/seaborn/regression.py
+
+    Args:
+        results: statsmodels OLS results
+            model results whose params and confidence intervals to plot
+        ci: float, optional
+            size of confidence intervals for marginal effects
+
+    Returns:
+
+    """
+    # Get basic information to prepare the plot
+    alpha = 1 - ci / 100
+    margeff = results.get_margeff()
+    cis = margeff.conf_int(alpha)
+    coefs = results.get_margeff().margeff
+    constant_cols_idx = np.argwhere(np.apply_along_axis(lambda x: np.unique(x).shape[0] == 1, 0, results.model.exog) == True).ravel()
+    coef_names = np.delete(results.params.index, constant_cols_idx)
+    n_terms = len(coefs)
+
+    # Figure out the dimensions of the plot
+    h, w = mpl.rcParams["figure.figsize"]
+    f, ax = plt.subplots(1, 1, figsize=(
+    n_terms * (1 / 2), n_terms * (h / (4 * (n_terms / 5)))))
+    for i, term in enumerate(coef_names):
+        low, high = cis[i]
+        ax.plot([low, high], [i, i], solid_capstyle="round", lw=2.5,
+                color='black')
+        ax.plot(coefs[i], i, "o", ms=8, color='black')
+    ax.set_ylim(-.5, n_terms - .5)
+    ax.set_yticks(range(n_terms))
+    ax.set_yticklabels(coef_names)
+    plt.setp(ax.get_xticklabels(), rotation=90)

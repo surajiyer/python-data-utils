@@ -538,17 +538,21 @@ def nullity_correlation(df, corr_method='spearman', jupyter_nb=False, fill_na=-1
     corr = drop_duplicates(corr, ['col1', 'col2']).reset_index(drop=True)
     
     if jupyter_nb:
-        def view_correlations(corr_strength=0.0):
-            if corr_strength == 0.0: x = corr
-            else: x = corr.where(abs(corr.value) > corr_strength).dropna()
-            print('N: {}'.format(x.shape[0]))
-            display(x)
-            return x
+        def filter(corr_strength=0.0, var_name=""):
+        	var_name = var_name.lower()
+        	x = corr
+        	if corr_strength > 0.0: x = x.where(abs(x.value) > corr_strength).dropna()
+        	if var_name: x = x.where(x.apply(lambda r: r.col1.lower().startswith(var_name) 
+        		or r.col2.lower().startswith(var_name), axis=1)).dropna()
+        	print('N: {}'.format(x.shape[0]))
+        	display(x)
+        	return x
 
         corr_slider = widgets.FloatSlider(value=0.0, min=0.0, max=1.0, step=0.0001)
-        w = interactive(view_correlations, corr_strength=corr_slider)
+        text_filter = widgets.Text(value="", placeholder="Type variable name")
+        w = interactive(filter, corr_strength=corr_slider, var_name=text_filter)
         
-        return corr, corr_slider, w
+        return corr, w
     
     return corr
 
