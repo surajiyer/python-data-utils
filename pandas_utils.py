@@ -582,9 +582,12 @@ def linearity_with_logodds_allcols(df, label_col, figsize=(30, 80), ncols=4):
     return fig
 
 def filter_columns(df, drop_cols=[], keep_cols=[]):
-    for c in set(drop_cols).difference(keep_cols):
-        if c in df:
-            df.drop(c, axis=1, inplace=True)
+    if len(drop_cols) > 0:
+        for c in set(drop_cols).difference(keep_cols):
+            if c in df:
+                df.drop(c, axis=1, inplace=True)
+    else:
+        return df[keep_cols]
     return df
 
 def drop_constant_columns(df, inplace=False, verbose=False):
