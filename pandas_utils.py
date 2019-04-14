@@ -614,3 +614,12 @@ def keep_top_k_categories(s, k=1, dropna=False):
     print('Top-{} categories:'.format(k), categories[:k], '\n')
     print('Other categories:', other_categories)
     return s.apply(lambda r: 'Other' if str(r) in other_categories else r)
+
+def df_value_counts(df, normalize=False, delimiter=';'):
+	cols = df.columns
+	df = df.copy()
+	df = df.apply(lambda row: delimiter.join((str(x) for x in row)), axis=1).value_counts(normalize=normalize)
+	df = df.reset_index()
+	df[cols] = df['index'].str.split(delimiter, expand=True)
+	df = df.drop('index', axis=1)
+	return df
