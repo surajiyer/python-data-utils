@@ -66,12 +66,12 @@ class SpellCheck:
         return (e2 for e1 in SpellCheck.edits_1(word) for e2 in SpellCheck.edits_1(e1))
 
     @staticmethod
-    def edits_n(word, n, k=None):
+    def edits_n(word, n=2, k=None):
         """All edits that are `n` edits away from `word`."""
         if k is None:
             k = n
         assert n > 0 and k > 0
         if k == 1:
             return SpellCheck.edits_1(word)
-        new_words = [w2 for w1 in SpellCheck.edits_1(word) for w2 in SpellCheck.edits_n(w1, n, k-1)]
+        new_words = (w2 for w1 in SpellCheck.edits_1(word) for w2 in SpellCheck.edits_n(w1, n, k-1))
         return list(set(new_words)) if k == n else new_words
