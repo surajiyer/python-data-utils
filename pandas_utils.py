@@ -541,14 +541,14 @@ def nullity_correlation(df, corr_method='spearman', jupyter_nb=False, fill_na=-1
     
     if jupyter_nb:
         def filter(corr_strength=0.0, var_name=""):
-        	var_name = var_name.lower()
-        	x = corr
-        	if corr_strength > 0.0: x = x.where(abs(x.value) > corr_strength).dropna()
-        	if var_name: x = x.where(x.apply(lambda r: r.col1.lower().startswith(var_name) 
-        		or r.col2.lower().startswith(var_name), axis=1)).dropna()
-        	print('N: {}'.format(x.shape[0]))
-        	display(x)
-        	return x
+            var_name = var_name.lower()
+            x = corr
+            if corr_strength > 0.0: x = x.where(abs(x.value) > corr_strength).dropna()
+            if var_name: x = x.where(x.apply(lambda r: r.col1.lower().startswith(var_name) 
+                or r.col2.lower().startswith(var_name), axis=1)).dropna()
+            print('N: {}'.format(x.shape[0]))
+            display(x)
+            return x
 
         corr_slider = widgets.FloatSlider(value=0.0, min=0.0, max=1.0, step=0.0001)
         text_filter = widgets.Text(value="", placeholder="Type variable name")
@@ -616,10 +616,18 @@ def keep_top_k_categories(s, k=1, dropna=False):
     return s.apply(lambda r: 'Other' if str(r) in other_categories else r)
 
 def df_value_counts(df, normalize=False, delimiter=';'):
-	cols = df.columns
-	df = df.copy()
-	df = df.apply(lambda row: delimiter.join((str(x) for x in row)), axis=1).value_counts(normalize=normalize)
-	df = df.reset_index()
-	df[cols] = df['index'].str.split(delimiter, expand=True)
-	df = df.drop('index', axis=1)
-	return df
+    cols = df.columns
+    df = df.copy()
+    df = df.apply(lambda row: delimiter.join((str(x) for x in row)), axis=1).value_counts(normalize=normalize)
+    df = df.reset_index()
+    df[cols] = df['index'].str.split(delimiter, expand=True)
+    df = df.drop('index', axis=1)
+    return df
+
+def reorder_columns(df, src_idx, dest_idx, copy=True):
+    if copy:
+        df = df.copy()
+    c = df.iloc[:,src_idx]
+    df.drop(c.name, axis=1, inplace=True)
+    df.insert(dest_idx, c.name, c)
+    return df
