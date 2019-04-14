@@ -298,6 +298,8 @@ def list_column_to_mutliple_columns(s):
     """
     return pd.get_dummies(s.apply(pd.Series).stack()).sum(level=0)
 
+def get_missingness(df): return [(c, df[c].isna().sum()) for c in df if df[c].isna().any()]
+
 def get_missingness_perc(df):
     """
     Get a percentage of missing values per column in input dataframe.
@@ -579,7 +581,33 @@ def linearity_with_logodds_allcols(df, label_col, figsize=(30, 80), ncols=4):
     plt.tight_layout()
     return fig
 
-def cleanhtml(raw_html):
-    cleanr = re.compile('<.*?>')
-    cleantext = re.sub(cleanr, '', raw_html)
-    return cleantext
+def filter_columns(df, drop_cols=[], keep_cols=[]):
+    for c in set(drop_cols).difference(keep_cols):
+        if c in df:
+            df.drop(c, axis=1, inplace=True)
+    return df
+
+def drop_constant_columns(df, inplace=False, verbose=False):
+    if verbose:
+        print('Dropping constant columns')
+    drop_cols = [c for c in df if df[c].nunique() == 1]
+    if verbose:
+        print('Before:', df.shape[1])
+    if inplace:
+        df.drop(drop_cols, axis=1, inplace=True)
+        if verbose:
+            print('After:', df.shape[1])
+    else:
+        X = df.drop(drop_cols, axis=1)
+        if verbose:
+            print('After:', X.shape[1])
+        return X
+
+def keep_top_k_categories(s, k=1, dropna=False):
+    if s.nunique() == 1:
+        return s
+    categories = [str(x) for x in s.value_counts(dropna=dropna).index.tolist()]
+    other_categories = categories[k:]
+    print('Top-{} categories:'.format(k), categories[:k], '\n')
+    print('Other categories:', other_categories)
+    return s.apply(lambda r: 'Other' if str(r) in other_categories else r)
