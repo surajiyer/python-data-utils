@@ -483,12 +483,12 @@ def feature_feature_relationship_one(df, cols, by=lambda x: True):
     plt.close()
     return fig
 
-def categorical_interaction_plot(df, col1, col2, by, figsize=(6, 6)):
-    fig, ax = plt.subplots(figsize=figsize)
-    fig = interaction_plot(x=df[col1], trace=df[by], response=df[col2], 
-                           colors=['red', 'blue'], markers=['D', '^'], ms=10, ax=ax)
-    plt.close()
-    return fig
+def categorical_interaction_plot(df, col1, col2, by, figsize=(6, 6), **plot_kwargs):
+    # fig, ax = plt.subplots(figsize=figsize)
+    return interaction_plot(x=df[col1], trace=by, response=df[col2], 
+        colors=['red', 'blue'], markers=['D', '^'], ms=10, **plot_kwargs)
+    # plt.close()
+    # return fig
 
 def drop_duplicates(df, columns):
     '''
@@ -582,12 +582,13 @@ def linearity_with_logodds_allcols(df, label_col, figsize=(30, 80), ncols=4):
     return fig
 
 def filter_columns(df, drop_cols=[], keep_cols=[]):
-    if len(drop_cols) > 0:
-        for c in set(drop_cols).difference(keep_cols):
-            if c in df:
-                df.drop(c, axis=1, inplace=True)
-    else:
-        return df[keep_cols]
+    # first drop columns; keep_cols takes priority, i.e., columns in both sets will be kept
+    df.drop(set(drop_cols).difference(keep_cols), axis=1, inplace=True, errors="ignore")
+
+    # then keep only columns given in keep_cols; if none given, then keep all remaining
+    x = df.columns.intersection(keep_cols)
+    if len(x) > 0:
+        df = df[x]
     return df
 
 def drop_constant_columns(df, inplace=False, verbose=False):
@@ -631,3 +632,9 @@ def reorder_columns(df, src_idx, dest_idx, copy=True):
     df.drop(c.name, axis=1, inplace=True)
     df.insert(dest_idx, c.name, c)
     return df
+
+def get_age_from_dob(s, round=True):
+    age = ((pd.to_datetime('today') - s) / np.timedelta64(1, 'Y')).fillna(-1)
+    if round:
+        age = age.apply(np.round).apply(int)
+    return age
