@@ -1,3 +1,4 @@
+word count
 ik 10006772
 je 9001167
 het 7081845
