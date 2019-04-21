@@ -15,14 +15,22 @@ class SpellCheck:
     """
     Spell checker
     """
-    def __init__(self, file_path=None, delimiter=" "):
+    def __init__(self, dict_file_path, file_type="csv", delimiter=" "):
         # Read words from dictionary
-        if file_path is None:
-            file_path = utils.words_dictionary_filepath('en', '50k')
-        # self.WORDS = {line.split(' ')[0]: int(line.split(' ')[1]) for line in open(file_path).readlines()}
+        # self.WORDS = {line.split(' ')[0]: int(line.split(' ')[1]) for line in open(dict_file_path).readlines()}
         # self.N = sum(self.WORDS.values())
-        self.WORDS, self.N = utils.build_trie_from_dict_file(file_path, header='include', delimiter=delimiter, 
-            callback=lambda f: sum(int(line.split(delimiter)[1]) for line in f.readlines()))
+        file_type = file_type.lower()
+        if dict_file_path is None or file_type == "csv":
+            self.WORDS, self.N = utils.build_trie_from_dict_file(dict_file_path, header='include', delimiter=delimiter, 
+                callback=lambda f: sum(int(line.split(delimiter)[1]) for line in f.readlines()))
+        elif file_type == "json":
+            self.WORDS = utils.Trie().load_from_json(dict_file_path)
+            self.N = self.WORDS.root['count']
+        elif file_type == "pkl" or file_type == "pickle":
+            self.WORDS = utils.Trie().load_from_pickle(dict_file_path)
+            self.N = self.WORDS.root['count']
+        else:
+            raise ValueError("Unsupported file type: {}".format(file_type))
 
     def P(self, word, N=None): 
         """Probability of `word`."""

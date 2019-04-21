@@ -34,12 +34,13 @@ class Trie:
         # add additional info about words, e.g., count
         if additional_keys:
             current.update(additional_keys)
+        return self
 
     def addAll(self, words):
         try:
             word = next(words)
         except:
-            return
+            return self
         if isinstance(word, dict):
             self.add(word.pop('word'), word)
             for word in words:
@@ -50,6 +51,7 @@ class Trie:
                 self.add(word)
         else:
             raise ValueError('words format incorrect.')
+        return self
 
     def find(self, word, additional_keys=None):
         if isinstance(additional_keys, str):
@@ -93,6 +95,7 @@ class Trie:
 
     def remove(self, word):
         self._delete(self.root, word, 0)
+        return self
 
     def _delete(self, current, word, index):
         if(index == len(word)):
@@ -123,6 +126,7 @@ class Trie:
         f = open(file_name + ".pkl", "rb")
         self.root = dill.load(f)
         f.close()
+        return self
 
     def save_to_json(self, file_name):
         json_data = json.dumps(self.root)
@@ -134,6 +138,7 @@ class Trie:
         json_file = open(file_name + ".json", "r")
         self.root = json.load(json_file)
         json_file.close()
+        return self
 
     def __contains__(self, key):
         return self.find(key)
