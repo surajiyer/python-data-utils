@@ -52,6 +52,8 @@ class Trie:
             raise ValueError('words format incorrect.')
 
     def find(self, word, additional_keys=None):
+        if isinstance(additional_keys, str):
+            additional_keys = [additional_keys]
         current = self.root
         for ch in word:
             if not (ch in current["children"]):
@@ -59,19 +61,19 @@ class Trie:
             node = current["children"][ch]
             current = node
 
-        if additional_keys is None or not current["isEndOfWord"]:
+        if not additional_keys or not current["isEndOfWord"]:
             return current["isEndOfWord"]
         else:
             return {arg: current[arg] for arg in set(additional_keys).intersection(current.keys())}
 
     def get(self, word, additional_key, default=None):
         x = self.find(word, additional_key)
-        if not x and not default:
+        if x is False and default is None:
             raise ValueError('{} not found'.format('word'))
-        elif not default:
+        elif default is None:
             raise ValueError('{} does not contain key {}'.format(word, additional_key))
         else:
-            return default if not x else x['additional_key']
+            return default if x is False else x[additional_key]
 
     def findPrefix(self, word):
         current = self.root

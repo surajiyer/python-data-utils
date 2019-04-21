@@ -18,12 +18,14 @@ def words(text): return re.findall(r'\w+', text.lower())
 
 def build_words_from_corpus_file(file_path): return Counter(words(open(file_path).read()))
 
-def build_words_from_dict_file(file_path, delimiter=' '):
+def build_words_from_dict_file(file_path, header=False, delimiter=" "):
 	with open(file_path, 'r', encoding='utf8') as f:
+		if header:
+			f.readline()
 		words = f.readlines()
 	return set(line.split(delimiter)[0] for line in words)
 
-def build_trie_from_dict_file(file_path, header=False, columns=[], delimiter=" ", cb=None):
+def build_trie_from_dict_file(file_path, header=False, columns=[], delimiter=" ", callback=None):
 	model = Trie()
 	value = None
 
@@ -43,11 +45,11 @@ def build_trie_from_dict_file(file_path, header=False, columns=[], delimiter=" "
 			model.addAll((line.replace('\n', '').split(delimiter)[0].lower() for line in f.readlines()))
 
 		# call the callback function
-		if cb:
+		if callback:
 			f.seek(start_pos)
-			value = cb(f)
+			value = callback(f)
 
-	if not cb:
+	if not callback:
 		return model
 	else:
 		return model, value
@@ -55,8 +57,18 @@ def build_trie_from_dict_file(file_path, header=False, columns=[], delimiter=" "
 def build_trie_from_corpus_file(file_path):
 	lang_dict = Counter(words(open(file_path).read()))
 	model = Trie()
-	model.addAll(({'word': line[i], 'count': count} for word, count in Counter.items()))
+	model.addAll(({'word': word, 'count': count} for word, count in Counter.items()))
 	return model
+
+def words_dictionary_filepath(lang='en', size='50k'):
+	"""
+	    lang: str, default='en'
+	    	Currently only English (en) / Dutch (nl) supported.
+	    size: str, default='50k'
+	        Use the small dictionary containing only top '50k' words or 'full' dictionary.
+	        Full dictionary is very large and can result in large running times.
+    """
+	return join(dirname(__file__), lang, '{}_{}.txt'.format(lang, size))
 
 def words_set_dictionary(lang='en', size='50k'):
 	"""
@@ -66,7 +78,7 @@ def words_set_dictionary(lang='en', size='50k'):
 	        Use the small dictionary containing only top '50k' words or 'full' dictionary.
 	        Full dictionary is very large and can result in large running times.
     """
-	return build_words_from_dict_file(join(dirname(__file__), lang, '{}_{}.txt'.format(lang, size)))
+	return build_words_from_dict_file(words_dictionary_filepath(lang, size))
 
 def words_trie_dictionary(lang='en', size='50k'):
 	"""
@@ -76,7 +88,7 @@ def words_trie_dictionary(lang='en', size='50k'):
 	        Use the small dictionary containing only top '50k' words or 'full' dictionary.
 	        Full dictionary is very large and can result in large running times.
     """
-	return build_trie_from_dict_file(join(dirname(__file__), lang, '{}_{}.txt'.format(lang, size)), header='include')
+	return build_trie_from_dict_file(words_dictionary_filepath(lang, size), header='include')
 
 def cleanhtml(raw_html):
     cleanr = re.compile('<.*?>')
@@ -137,5 +149,5 @@ def cluster_words_by_edit_distance2(words, verbose=True, **kwargs):
 			print(" - *%s:* %s" % (exemplar, ", ".join(clusters[exemplar])))
 	return clusters
 
-def count_words(sentence):
-	return len(sentence.split(' '))
+def count_words(sentence, delimiter=' '):
+	return len(sentence.split(delimiter))

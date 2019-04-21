@@ -18,17 +18,17 @@ class SpellCheck:
     def __init__(self, file_path=None, delimiter=" "):
         # Read words from dictionary
         if file_path is None:
-            file_path = join(dirname(__file__), 'en', '{}_{}.txt'.format('en', '50k'))
+            file_path = utils.words_dictionary_filepath('en', '50k')
         # self.WORDS = {line.split(' ')[0]: int(line.split(' ')[1]) for line in open(file_path).readlines()}
         # self.N = sum(self.WORDS.values())
         self.WORDS, self.N = utils.build_trie_from_dict_file(file_path, header='include', delimiter=delimiter, 
-            cb=lambda f: sum(int(line.split(delimiter)[1]) for line in f.readlines()))
+            callback=lambda f: sum(int(line.split(delimiter)[1]) for line in f.readlines()))
 
     def P(self, word, N=None): 
         """Probability of `word`."""
         if N is None:
             N = self.N
-        return self.WORDS.get(word, 0) / N
+        return int(self.WORDS.get(word, 'count', 0)) / N
 
     # def known(self, words):
     #     """The subset of `words` that appear in the dictionary of WORDS."""
@@ -39,9 +39,15 @@ class SpellCheck:
         # return (self.known([word]) or self.known(utils.edit_dist(word, dist)) or [word])
         return self.WORDS.find_within_distance(word, dist) + ([word] if self.WORDS.find(word) else [])
 
-    def correct_word(self, word):
+    def correct_word(self, word, dist=2, error='ignore'):
         """Most probable spelling correction for word."""
-        return max(self.candidates(word), key=self.P)
+        candidates = self.candidates(word, dist)
+        if error == 'ignore' and not candidates:
+            return word
+        elif error == 'raise' or not not candidates:
+            return max(candidates, key=self.P)
+        else:
+            raise ValueError("'error' can only be 'raise' or 'ignore'")
 
-    def correct_sentence(self, sentence):
-        return ' '.join(self.correct_word(w) for w in sentence)
+    def correct_sentence(self, sentence, dist=2):
+        return ' '.join(self.correct_word(w, dist) for w in sentence)
