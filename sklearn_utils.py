@@ -10,6 +10,7 @@ from __future__ import print_function
 import six
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from scipy import stats
 from sklearn import linear_model
 from sklearn.base import BaseEstimator, TransformerMixin
@@ -17,12 +18,13 @@ from sklearn.model_selection import StratifiedKFold
 from sklearn.model_selection import cross_validate as _cross_validate
 from sklearn.utils.validation import check_is_fitted
 from sklearn.preprocessing import LabelEncoder, StandardScaler, MinMaxScaler
-from sklearn.metrics import make_scorer, roc_curve, auc 
+from sklearn.metrics import make_scorer, roc_curve, auc
 
 
 ###############################################################################
 # SKLEARN GENERAL FUNCTIONS
 ###############################################################################
+
 
 def get_estimator_name(clf):
     """
@@ -32,9 +34,11 @@ def get_estimator_name(clf):
     """
     return str(type(clf)).split('.')[-1].replace("'>", "")
 
+
 ###############################################################################
 # SKLEARN CUSTOM ESTIMATORS
 ###############################################################################
+
 
 class LinearRegression(linear_model.LinearRegression):
     """
@@ -48,29 +52,29 @@ class LinearRegression(linear_model.LinearRegression):
     """
 
     def __init__(self, *args, **kwargs):
-        if not "fit_intercept" in kwargs:
+        if "fit_intercept" not in kwargs:
             kwargs['fit_intercept'] = False
-        super(LinearRegression, self)\
-                .__init__(*args, **kwargs)
+        super(LinearRegression, self).__init__(*args, **kwargs)
 
     def fit(self, X, y, n_jobs=1):
         self = super(LinearRegression, self).fit(X, y, n_jobs)
 
         sse = np.sum((self.predict(X) - y) ** 2, axis=0) / float(X.shape[0] - X.shape[1])
-        se = np.array([
-            np.sqrt(np.diagonal(sse[i] * np.linalg.inv(np.dot(X.T, X)))) 
-            for i in range(sse.shape[0])
-        ])
+        se = np.array([np.sqrt(np.diagonal(sse[i] * np.linalg.inv(np.dot(X.T, X)))) for i in range(sse.shape[0])])
 
         self.t = self.coef_ / se
         self.p = 2 * (1 - stats.t.cdf(np.abs(self.t), y.shape[0] - X.shape[1]))
         return self
 
+
 ###############################################################################
 # SKLEARN EVALUATION FUNCTIONS
 ###############################################################################
 
-CV = lambda n_splits=5: StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=0)
+
+def CV(n_splits=5):
+    return StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=0)
+
 
 def cross_validate(clf, X, y, scorer, cv, fit_params=None):
     """
@@ -103,8 +107,8 @@ def cross_validate(clf, X, y, scorer, cv, fit_params=None):
     if not is_multimetric:
         train_score = scores.pop("train_score", None)
         if train_score is not None:
-            scores['train_%s' % scorer] = train_score*sign
-        scores['test_%s' % scorer] = scores.pop("test_score")*sign
+            scores['train_%s' % scorer] = train_score * sign
+        scores['test_%s' % scorer] = scores.pop("test_score") * sign
         scorer = [scorer]
 
     for metric in scorer:
@@ -115,6 +119,7 @@ def cross_validate(clf, X, y, scorer, cv, fit_params=None):
         print("")
     return scores
 
+
 def visualize_RF_feature_importances(forest_model, features, k_features=10):
     """
     :param forest_model: RandomForest model object
@@ -122,8 +127,7 @@ def visualize_RF_feature_importances(forest_model, features, k_features=10):
         Top-k features will be displayed.
     """
     importances = forest_model.feature_importances_[:10]
-    std = np.std([tree.feature_importances_ for tree in forest_model.estimators_], 
-                 axis=0)
+    std = np.std([tree.feature_importances_ for tree in forest_model.estimators_], axis=0)
     indices = np.argsort(importances)[::-1]
 
     # Print the feature ranking
@@ -139,29 +143,28 @@ def visualize_RF_feature_importances(forest_model, features, k_features=10):
     plt.xlim([-1, 10])
     plt.show()
 
+
 def plot_roc(X, y, clf_class, n_cv=5, **kwargs):
     kf = StratifiedKFold(len(y), n_folds=n_cv, shuffle=True)
-    y_prob = np.zeros((len(y),2))
+    y_prob = np.zeros((len(y), 2))
     mean_tpr = 0.0
     mean_fpr = np.linspace(0, 1, 100)
-    all_tpr = []
     for i, (train_index, test_index) in enumerate(kf):
         X_train, X_test = X[train_index], X[test_index]
         y_train = y[train_index]
         clf = clf_class(**kwargs)
-        clf.fit(X_train,y_train)
+        clf.fit(X_train, y_train)
         # Predict probabilities, not classes
         y_prob[test_index] = clf.predict_proba(X_test)
         fpr, tpr, thresholds = roc_curve(y[test_index], y_prob[test_index, 1])
-        mean_tpr += interp(mean_fpr, fpr, tpr)
+        mean_tpr += np.interp(mean_fpr, fpr, tpr)
         mean_tpr[0] = 0.0
         roc_auc = auc(fpr, tpr)
         plt.plot(fpr, tpr, lw=1, label='ROC fold %d (area = %0.2f)' % (i, roc_auc))
     mean_tpr /= len(kf)
     mean_tpr[-1] = 1.0
     mean_auc = auc(mean_fpr, mean_tpr)
-    plt.plot(mean_fpr, mean_tpr, 'k--',label='Mean ROC (area = %0.2f)' % mean_auc, lw=2)
-    
+    plt.plot(mean_fpr, mean_tpr, 'k--', label='Mean ROC (area = %0.2f)' % mean_auc, lw=2)
     plt.plot([0, 1], [0, 1], '--', color=(0.6, 0.6, 0.6), label='Random')
     plt.xlim([-0.05, 1.05])
     plt.ylim([-0.05, 1.05])
@@ -353,11 +356,9 @@ def mapk(y_true, y_pred, k=10):
     Parameters
     ----------
     y_true : list
-             A list of lists of elements that are to be predicted 
-             (order doesn't matter in the lists)
+        A list of lists of elements that are to be predicted (order doesn't matter in the lists)
     y_pred : list
-                A list of lists of predicted elements
-                (order matters in the lists)
+        A list of lists of predicted elements (order matters in the lists)
     k : int, optional
         The maximum number of predicted elements
     Returns

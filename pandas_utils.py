@@ -10,11 +10,10 @@ from __future__ import print_function
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 import seaborn as sns
 from IPython.display import display
 import ipywidgets as widgets
-from ipywidgets import interactive, interact
+from ipywidgets import interactive
 import six
 import time
 import dill
@@ -25,10 +24,9 @@ from sklearn.utils import resample
 from progressbar.bar import ProgressBar
 from pandas.plotting import scatter_matrix
 from statsmodels.graphics.factorplots import interaction_plot
-import re
 # from imblearn.over_sampling import smote
 
-plt.style.use('seaborn') # pretty matplotlib plots
+plt.style.use('seaborn')  # pretty matplotlib plots
 # plt.rc('font', size=12)
 # plt.rc('figure', titlesize=18)
 # plt.rc('axes', labelsize=15)
@@ -49,13 +47,16 @@ def df_mem_usage(df):
 
     # get average memory usage per datatype
     dtypes = [c.name for c in df.dtypes.unique()]
-    result.update({'Average memory usage for {} columns'.format(c): None for c in dtypes})
+    result.update(
+        {'Average memory usage for {} columns'.format(c): None for c in dtypes})
     for dtype in dtypes:
-        usage_b = df.select_dtypes(include=[dtype]).memory_usage(deep=True).mean()
-        result.update({'Average memory usage for {} columns'.format(dtype)
-                       : "{:03.2f} MB".format(usage_b / 1024 ** 2)})
+        usage_b = df.select_dtypes(
+            include=[dtype]).memory_usage(deep=True).mean()
+        result.update({"Average memory usage for {} columns: {:03.2f} MB".format(
+            dtype, usage_b / 1024 ** 2)})
 
     return result
+
 
 def optimize_dataframe(df, categorical=[], always_positive_ints=[], cat_nunique_ratio=.5, verbose=False):
     """
@@ -72,7 +73,9 @@ def optimize_dataframe(df, categorical=[], always_positive_ints=[], cat_nunique_
     :return df: pandas DataFrame
     """
     cat = [] if len(categorical) == 0 else list(zip(*categorical))[0]
-    getCols = lambda dtype: df.columns[df.dtypes == dtype].difference(always_positive_ints).difference(cat)
+
+    def getCols(dtype): return df.columns[df.dtypes == dtype].difference(
+        always_positive_ints).difference(cat)
 
     if verbose:
         print('Before:', df_mem_usage(df))
@@ -80,7 +83,8 @@ def optimize_dataframe(df, categorical=[], always_positive_ints=[], cat_nunique_
     # convert always positive columns to unsigned ints
     # nulls are represented as floats so we ignore them
     cols = df.columns[~df.isnull().any()].intersection(always_positive_ints)
-    df.loc[:, cols] = df[cols].fillna(-1).astype('int').apply(pd.to_numeric, downcast='unsigned')
+    df.loc[:, cols] = df[cols].fillna(-1).astype(
+        'int').apply(pd.to_numeric, downcast='unsigned')
     # Converting back to nan changes them back to float64 dtype
     # df.loc[(df[cols] == -1).any(axis=1), cols] = np.nan
 
@@ -103,20 +107,23 @@ def optimize_dataframe(df, categorical=[], always_positive_ints=[], cat_nunique_
     for col, prop in categorical:
         if col in df.columns and df.dtypes[col].name != 'category':
             if isinstance(prop, (list, tuple)):
-                df.loc[:, col] = df[col].astype(pd.api.types.CategoricalDtype(categories=prop[1], 
+                df.loc[:, col] = df[col].astype(pd.api.types.CategoricalDtype(categories=prop[1],
                                                                               ordered=prop[0]))
             elif isinstance(prop, dict):
-                df.loc[:, col] = df[col].astype(pd.api.types.CategoricalDtype(categories=prop['categories'], 
+                df.loc[:, col] = df[col].astype(pd.api.types.CategoricalDtype(categories=prop['categories'],
                                                                               ordered=prop['ordered']))
             elif isinstance(prop, bool):
-                df.loc[:, col] = df[col].astype(pd.api.types.CategoricalDtype(ordered=prop))
+                df.loc[:, col] = df[col].astype(
+                    pd.api.types.CategoricalDtype(ordered=prop))
             else:
-                raise ValueError('Categorical variable {} ill-specified.'.format(col))
+                raise ValueError(
+                    'Categorical variable {} ill-specified.'.format(col))
 
     if verbose:
         print('After:', df_mem_usage(df))
 
     return df
+
 
 def tsv_to_pandas_generator(file_path, target_label=None, chunksize=None):
     """
@@ -127,7 +134,7 @@ def tsv_to_pandas_generator(file_path, target_label=None, chunksize=None):
         target label column name
     :param chunksize: int
         function yields dataframes in chunks as a generator function
-    :return: 
+    :return:
         X: pandas.DataFrame
         y: pandas.Series
             included if target label is given
@@ -141,6 +148,7 @@ def tsv_to_pandas_generator(file_path, target_label=None, chunksize=None):
             yield chunk.drop([target_label], axis=1), chunk[target_label]
         else:
             yield chunk
+
 
 def tsv_to_pandas(file_path, target_label=None, memory_optimize=True, categorical=[],
                   always_positive=[], save_pickle_obj=False, verbose=False):
@@ -162,7 +170,7 @@ def tsv_to_pandas(file_path, target_label=None, memory_optimize=True, categorica
     :param save_pickle_obj: bool, str, optional (default=False)
         Save the final result as a pickle object. Save path can be given as a string.
         Otherwise, saved in the same directory as the input file path.
-    :return: 
+    :return:
         X: pandas.DataFrame
         y: pandas.Series
             included if target label is given
@@ -181,7 +189,8 @@ def tsv_to_pandas(file_path, target_label=None, memory_optimize=True, categorica
     chunksize = 100000
     progress = ProgressBar(max_value=int(filesize / chunksize)).start()
 
-    data = tsv_to_pandas_generator(file_path, target_label, chunksize=chunksize)
+    data = tsv_to_pandas_generator(
+        file_path, target_label, chunksize=chunksize)
     X_list, y_list = [], []
 
     # To save intermediate results
@@ -206,9 +215,11 @@ def tsv_to_pandas(file_path, target_label=None, memory_optimize=True, categorica
         # Memory compression
         if memory_optimize:
             if i == 0:
-                always_positive = [col for c0 in always_positive for col in X.columns if c0 in col]
+                always_positive = [
+                    col for c0 in always_positive for col in X.columns if c0 in col]
 
-            X = optimize_dataframe(X, always_positive_ints=always_positive, categorical=categorical)
+            X = optimize_dataframe(
+                X, always_positive_ints=always_positive, categorical=categorical)
 
             # save intermediate results
             with open("{}/{}.pkl".format(results_dir, i), 'wb') as f:
@@ -231,7 +242,8 @@ def tsv_to_pandas(file_path, target_label=None, memory_optimize=True, categorica
 
     if verbose:
         print(df_mem_usage(X))
-        print('Finished in {0:.1f} minutes'.format((time.time() - start_time) / 60))
+        print('Finished in {0:.1f} minutes'.format(
+            (time.time() - start_time) / 60))
 
     # save the final result
     if save_pickle_obj:
@@ -261,6 +273,7 @@ def tsv_to_pandas(file_path, target_label=None, memory_optimize=True, categorica
 
     return (X, y) if target_label else X
 
+
 def pandas_to_tsv(save_file_path, df, index=False, mode='w', header=True):
     """
     Save pre-processed DataFrame as tsv file.
@@ -274,10 +287,11 @@ def pandas_to_tsv(save_file_path, df, index=False, mode='w', header=True):
         file save mode; 'w' for write and 'a' for append to existing file.
     :param header: bool
         write the column names to output.
-    :return: 
     """
-    assert isinstance(save_file_path, six.string_types) and len(save_file_path) > 0
-    assert isinstance(df, pd.DataFrame) and not df.empty, 'df must be a non-empty pandas.DataFrame'
+    assert isinstance(save_file_path, six.string_types) and len(
+        save_file_path) > 0
+    assert isinstance(
+        df, pd.DataFrame) and not df.empty, 'df must be a non-empty pandas.DataFrame'
     assert isinstance(mode, six.string_types)
 
     # make a new directory to save the file
@@ -288,7 +302,9 @@ def pandas_to_tsv(save_file_path, df, index=False, mode='w', header=True):
             raise
 
     # save the file
-    df.to_csv(save_file_path, sep='\t', na_rep=r'\N', index=index, mode=mode, header=header)
+    df.to_csv(save_file_path, sep='\t', na_rep=r'\N',
+              index=index, mode=mode, header=header)
+
 
 def list_column_to_mutliple_columns(s):
     """
@@ -298,28 +314,34 @@ def list_column_to_mutliple_columns(s):
     """
     return pd.get_dummies(s.apply(pd.Series).stack()).sum(level=0)
 
-def get_missingness(df): return [(c, df[c].isna().sum()) for c in df if df[c].isna().any()]
+
+def get_missingness(df): return [(c, df[c].isna().sum())
+                                 for c in df if df[c].isna().any()]
+
 
 def get_missingness_perc(df):
     """
     Get a percentage of missing values per column in input dataframe.
     :param df: Input pandas dataframe
-    :return missingness: Pandas dataframe with index as columns from df and values 
-                         as missingness level of corresponding column.
+    :return missingness:
+        Pandas dataframe with index as columns from df and values
+        as missingness level of corresponding column.
     """
-    missingness = pd.DataFrame([(len(df[c])-df[c].count())*100.00/len(df[c]) for c in df], 
+    missingness = pd.DataFrame([(len(df[c]) - df[c].count()) * 100.00 / len(df[c]) for c in df],
                                index=df.columns, columns=['Missingness %'])
     return missingness
+
 
 def jupyter_plot_interactive_correlation_to_label_col(df, label_col):
     """
     Plot (interactive  jupyter NB) correlation vector of label column to all other columns.
     Correlation value obtained using spearman rank test.
-    
+
     :param df: Pandas dataframe
     :label_col: Label column for which we find correlation to all other columns.
-    :return corr: Dataframe containing 2 columns: one for correlation values obtained 
-                  using Pearson Rho test and one with Spearman Rank test.
+    :return corr:
+        Dataframe containing 2 columns: one for correlation values obtained
+        using Pearson Rho test and one with Spearman Rank test.
     :return corr_slider: Jupyter widgets.FloatSlider ranging from 0.0 to 1.0 to control interactive view.
     """
     # Get Pearson correlation - to describe extent of linear correlation with label
@@ -331,16 +353,20 @@ def jupyter_plot_interactive_correlation_to_label_col(df, label_col):
     corr = pd.concat([pearson, spearman], axis=1)
 
     def view_correlations(corr_strength=0.0):
-        if corr_strength == 0.0: x = corr
-        else: x = corr.where((abs(corr.spearman) > corr_strength) & (corr.spearman != 1)).dropna()
+        if corr_strength == 0.0:
+            x = corr
+        else:
+            x = corr.where((abs(corr.spearman) > corr_strength)
+                           & (corr.spearman != 1)).dropna()
         print('N: {}'.format(x.shape[0]))
         display(x)
         return x
 
     corr_slider = widgets.FloatSlider(value=0.0, min=0.0, max=1.0, step=0.0001)
     w = interactive(view_correlations, corr_strength=corr_slider)
-    
+
     return corr, corr_slider, w
+
 
 def feature_corr_matrix(df, size=10, method="spearman"):
     """Function plots a graphical correlation matrix for each pair of columns in the dataframe.
@@ -350,7 +376,6 @@ def feature_corr_matrix(df, size=10, method="spearman"):
         size: vertical and horizontal size of the plot
         method: correlation test method
     """
-
     corr = df.corr(method=method)
     fig, ax = plt.subplots(figsize=(size, size))
     im = ax.matshow(corr)
@@ -359,16 +384,18 @@ def feature_corr_matrix(df, size=10, method="spearman"):
     plt.colorbar(im)
     return fig
 
+
 def feature_corr_matrix_compact(df, method="spearman"):
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    im = ax.matshow(df.corr(method=method));
+    im = ax.matshow(df.corr(method=method))
     fig.colorbar(im)
     return fig
 
+
 def feature_corr_matrix_sns(df, method="spearman", upsidedown=False):
     corr = df.corr(method=method)
-    
+
     # Generate a mask for the upper triangle
     if not upsidedown:
         mask = np.ones_like(corr, dtype=np.bool)
@@ -387,12 +414,13 @@ def feature_corr_matrix_sns(df, method="spearman", upsidedown=False):
     # Draw the heatmap with the mask and correct aspect ratio
     x = sns.heatmap(corr, mask=mask, cmap=cmap, center=0, ax=ax,
                     square=True, linewidths=.5, cbar_kws={"shrink": .5})
-    
+
     if upsidedown:
         for i, t in enumerate(ax.get_yticklabels()):
             t.set_rotation(180)
 
     return x
+
 
 def np_to_pd(X, columns=None):
     if isinstance(X, pd.DataFrame):
@@ -405,31 +433,37 @@ def np_to_pd(X, columns=None):
     else:
         raise ValueError('Input X must be a numpy array')
 
+
 def balanced_sampling(df_minority, df_majority, minority_upsampling_ratio=0.2, only_upsample=False,
                       use_smote_upsampling=False):
     # Upsample minority class by minority_upsampling_ratio%
     new_size = int(df_minority.shape[0] * (1 + minority_upsampling_ratio))
     # upsample the minority class to the new size
     if use_smote_upsampling:
-        pass  #smote.SMOTE(kind='borderline1').fit_sample()
+        pass  # smote.SMOTE(kind='borderline1').fit_sample()
     else:
-        df_minority = resample(df_minority, replace=True, n_samples=new_size, random_state=0)
+        df_minority = resample(df_minority, replace=True,
+                               n_samples=new_size, random_state=0)
     if not only_upsample:
         # downsample the majority class to the new size
-        df_majority = resample(df_majority, replace=False, n_samples=new_size, random_state=0)
+        df_majority = resample(df_majority, replace=False,
+                               n_samples=new_size, random_state=0)
     df = pd.concat([df_minority, df_majority])
     return df
+
 
 def feature_distributions_hist(df, figsize=(20, 20)):
     return df.hist(figsize=figsize)
 
+
 def feature_distributions_boxplot(df, figsize=(20, 5)):
     return df.boxplot(rot=90, figsize=figsize)
+
 
 def feature_class_relationship(df, by, figsize=(20, 20), ncols=4):
     """
     Plot histograms for every variable in :param df: grouped by :param by:.
-    
+
     :param df: Pandas DataFrame
     :param by: See documentation on Pandas.groupBy(by=...).
     :param figsize: See documentation on matplotlib.figure(figsize=...).
@@ -437,9 +471,10 @@ def feature_class_relationship(df, by, figsize=(20, 20), ncols=4):
     """
     grps = df.groupby(by)
     f = plt.figure(figsize=figsize)
-    nrows = len(df.columns)//ncols + (1 if len(df.columns) % ncols != 0 else 0)
+    nrows = len(df.columns) // ncols + \
+        (1 if len(df.columns) % ncols != 0 else 0)
     for i, c in enumerate(df.columns):
-        ax = f.add_subplot(nrows, ncols, i+1)
+        ax = f.add_subplot(nrows, ncols, i + 1)
         for k, v in grps:
             ax.hist(v[c], label=k, bins=25, alpha=0.4)
 #         grps[c].hist(bins=25, alpha=0.4, ax=ax)
@@ -449,15 +484,17 @@ def feature_class_relationship(df, by, figsize=(20, 20), ncols=4):
     plt.close()
     return f
 
+
 def feature_feature_relationship(df, figsize=(20, 20)):
-    sm = scatter_matrix(df+0.00001*np.random.rand(*df.shape), alpha=0.2, figsize=figsize, diagonal='kde')
+    sm = scatter_matrix(df + 0.00001 * np.random.rand(*df.shape),
+                        alpha=0.2, figsize=figsize, diagonal='kde')
 
     # change label rotation
     [s.xaxis.label.set_rotation(90) for s in sm.reshape(-1)]
     [s.yaxis.label.set_rotation(0) for s in sm.reshape(-1)]
 
     # may need to offset label when rotating to prevent overlap of figure
-    [s.get_yaxis().set_label_coords(-0.3,0.5) for s in sm.reshape(-1)]
+    [s.get_yaxis().set_label_coords(-0.3, 0.5) for s in sm.reshape(-1)]
 
     # hide all ticks
     [s.set_xticks(()) for s in sm.reshape(-1)]
@@ -465,16 +502,21 @@ def feature_feature_relationship(df, figsize=(20, 20)):
 
     return sm
 
+
 def feature_feature_relationship_one(df, cols, by=lambda x: True):
-    assert 1 < len(cols) <= 3, 'Number of columns must equal 2 or 3 dimensions.'
-    i = 0; colors=list('rbgym')
+    assert 1 < len(
+        cols) <= 3, 'Number of columns must equal 2 or 3 dimensions.'
+    i = 0
+    colors = list('rbgym')
     fig = plt.figure()
     if len(cols) == 3:
         ax = fig.add_subplot(111, projection='3d')
     else:
         ax = fig.add_subplot(111)
     for name, g in df.groupby(by):
-        ax.scatter(*[g[c] for c in cols], label=name, edgecolors='k', alpha=.2, color=colors[i]); i += 1
+        ax.scatter(*[g[c] for c in cols], label=name,
+                   edgecolors='k', alpha=.2, color=colors[i])
+        i += 1
     ax.set_xlabel(cols[0])
     ax.set_ylabel(cols[1])
     if len(cols) == 3:
@@ -483,26 +525,27 @@ def feature_feature_relationship_one(df, cols, by=lambda x: True):
     plt.close()
     return fig
 
+
 def categorical_interaction_plot(df, col1, col2, by, figsize=(6, 6), **plot_kwargs):
-    # fig, ax = plt.subplots(figsize=figsize)
-    return interaction_plot(x=df[col1], trace=by, response=df[col2], 
-        colors=['red', 'blue'], markers=['D', '^'], ms=10, **plot_kwargs)
-    # plt.close()
-    # return fig
+    return interaction_plot(x=df[col1], trace=by, response=df[col2],
+                            colors=['red', 'blue'], markers=['D', '^'], ms=10, **plot_kwargs)
+
 
 def drop_duplicates(df, columns):
     '''
     Drop duplicate rows based on unique values from combination of given columns.
-    
+
     :param df: dataframe
     :param columns: list of str
         Keeps unique combinations of values across given columns and drops remaining.
         Note that output will still include all other columns.
     :return df: dataframe with duplicates acros all :columns: dropped.
     '''
-    df['check_string'] = df.apply(lambda row: ''.join(sorted([row[c] for c in columns])), axis=1)
+    df['check_string'] = df.apply(lambda row: ''.join(
+        sorted([row[c] for c in columns])), axis=1)
     df = df.drop_duplicates('check_string')
     return df.drop('check_string', axis=1)
+
 
 def add_NA_indicator_variables(df, copy=True):
     """
@@ -512,8 +555,9 @@ def add_NA_indicator_variables(df, copy=True):
     for i, c in enumerate(df_.columns):
         x = df_[c].isna()
         if x.any():
-            df_.insert(i+1, '{}_NA'.format(c), x)
+            df_.insert(i + 1, '{}_NA'.format(c), x)
     return df_
+
 
 def nullity_correlation(df, corr_method='spearman', jupyter_nb=False, fill_na=-1):
     df_ = df.copy()
@@ -523,73 +567,82 @@ def nullity_correlation(df, corr_method='spearman', jupyter_nb=False, fill_na=-1
 
     # check correlation between each variable and indicator
     corr = df_.fillna(fill_na).corr(method=corr_method)
-    
+
     # reshaping the correlation matrix
     corr = corr.stack().reset_index()
     corr.columns = ['col1', 'col2', 'value']
-    
-    # delete the left-right matching columns (since they are 100% correlated) 
+
+    # delete the left-right matching columns (since they are 100% correlated)
     # and right-side columns without the 'is_missing'
-    corr = corr[(corr.col1 != corr.col2) 
-                & (corr.col2.apply(lambda x: 'NA' in x)) 
-                & (corr.apply(lambda row: not(row['col1'] in row['col2'] or row['col2'] in row['col1']), axis=1))]
-    
+    corr = corr[(corr.col1 != corr.col2) &
+                (corr.col2.apply(lambda x: 'NA' in x)) &
+                (corr.apply(lambda row: not(row['col1'] in row['col2'] or row['col2'] in row['col1']), axis=1))]
+
     # sort descending based on value column
     corr['value_abs'] = corr.value.apply(np.abs)
-    corr = corr.dropna().sort_values(by='value_abs', ascending=False).drop(['value_abs'], axis=1)
+    corr = corr.dropna().sort_values(
+        by='value_abs', ascending=False).drop(['value_abs'], axis=1)
     corr = drop_duplicates(corr, ['col1', 'col2']).reset_index(drop=True)
-    
+
     if jupyter_nb:
         def filter(corr_strength=0.0, var_name=""):
             var_name = var_name.lower()
             x = corr
-            if corr_strength > 0.0: x = x.where(abs(x.value) > corr_strength).dropna()
-            if var_name: x = x.where(x.apply(lambda r: r.col1.lower().startswith(var_name) 
-                or r.col2.lower().startswith(var_name), axis=1)).dropna()
+            if corr_strength > 0.0:
+                x = x.where(abs(x.value) > corr_strength).dropna()
+            if var_name:
+                x = x.where(x.apply(lambda r: r.col1.lower().startswith(var_name) or
+                                    r.col2.lower().startswith(var_name), axis=1)).dropna()
             print('N: {}'.format(x.shape[0]))
             display(x)
             return x
 
-        corr_slider = widgets.FloatSlider(value=0.0, min=0.0, max=1.0, step=0.0001)
+        corr_slider = widgets.FloatSlider(
+            value=0.0, min=0.0, max=1.0, step=0.0001)
         text_filter = widgets.Text(value="", placeholder="Type variable name")
-        w = interactive(filter, corr_strength=corr_slider, var_name=text_filter)
-        
+        w = interactive(filter, corr_strength=corr_slider,
+                        var_name=text_filter)
+
         return corr, w
-    
+
     return corr
+
 
 def missingness_heatmap(df):
     return sns.heatmap(df.isnull(), cbar=False)
 
+
 def linearity_with_logodds(df, col, label_col, ax=None):
-    df_ = pd.pivot_table(df, columns=[label_col]
-                         , index=[col]
-                         , aggfunc={label_col: len}
-                         , fill_value=0)
-    df_['Odds(1)'] = df_[(label_col, 1.0)] /  df_[(label_col, 0.0)]
-    df_['LogOdds(1)'] = np.log(1+df_['Odds(1)'])
+    df_ = pd.pivot_table(df, columns=[label_col], index=[
+                         col], aggfunc={label_col: len}, fill_value=0)
+    df_['Odds(1)'] = df_[(label_col, 1.0)] / df_[(label_col, 0.0)]
+    df_['LogOdds(1)'] = np.log(1 + df_['Odds(1)'])
     df_ = df_.reset_index()
     return df_.plot.line(col, "LogOdds(1)", ax=ax)
 
+
 def linearity_with_logodds_allcols(df, label_col, figsize=(30, 80), ncols=4):
     fig = plt.figure(figsize=figsize)
-    n = len(df.columns)-1  # minus 1 because we discount label column
-    nrows = n//ncols + (1 if n % ncols != 0 else 0)
+    n = len(df.columns) - 1  # minus 1 because we discount label column
+    nrows = n // ncols + (1 if n % ncols != 0 else 0)
     for i, c in enumerate(df.columns.difference([label_col])):
-        ax = fig.add_subplot(nrows, ncols, i+1)
-        linearity_with_logodds(df, c, label_col, ax=ax);
+        ax = fig.add_subplot(nrows, ncols, i + 1)
+        linearity_with_logodds(df, c, label_col, ax=ax)
     plt.tight_layout()
     return fig
 
+
 def filter_columns(df, drop_cols=[], keep_cols=[]):
     # first drop columns; keep_cols takes priority, i.e., columns in both sets will be kept
-    df.drop(set(drop_cols).difference(keep_cols), axis=1, inplace=True, errors="ignore")
+    df.drop(set(drop_cols).difference(keep_cols),
+            axis=1, inplace=True, errors="ignore")
 
     # then keep only columns given in keep_cols; if none given, then keep all remaining
     x = df.columns.intersection(keep_cols)
     if len(x) > 0:
         df = df[x]
     return df
+
 
 def drop_constant_columns(df, inplace=False, verbose=False):
     if verbose:
@@ -607,6 +660,7 @@ def drop_constant_columns(df, inplace=False, verbose=False):
             print('After:', X.shape[1])
         return X
 
+
 def keep_top_k_categories(s, k=1, dropna=False):
     if s.nunique() == 1:
         return s
@@ -616,22 +670,26 @@ def keep_top_k_categories(s, k=1, dropna=False):
     print('Other categories:', other_categories)
     return s.apply(lambda r: 'Other' if str(r) in other_categories else r)
 
+
 def df_value_counts(df, normalize=False, delimiter=';'):
     cols = df.columns
     df = df.copy()
-    df = df.apply(lambda row: delimiter.join((str(x) for x in row)), axis=1).value_counts(normalize=normalize)
+    df = df.apply(lambda row: delimiter.join((str(x)
+                                              for x in row)), axis=1).value_counts(normalize=normalize)
     df = df.reset_index()
     df[cols] = df['index'].str.split(delimiter, expand=True)
     df = df.drop('index', axis=1)
     return df
 
+
 def reorder_columns(df, src_idx, dest_idx, copy=True):
     if copy:
         df = df.copy()
-    c = df.iloc[:,src_idx]
+    c = df.iloc[:, src_idx]
     df.drop(c.name, axis=1, inplace=True)
     df.insert(dest_idx, c.name, c)
     return df
+
 
 def get_age_from_dob(s, round=True):
     age = ((pd.to_datetime('today') - s) / np.timedelta64(1, 'Y')).fillna(-1)

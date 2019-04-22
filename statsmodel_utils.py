@@ -13,11 +13,10 @@ import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import statsmodels as statsm
-import statsmodels.formula.api as smf
 from statsmodels.graphics.gofplots import ProbPlot
 import re
 
-plt.style.use('seaborn') # pretty matplotlib plots
+plt.style.use('seaborn')  # pretty matplotlib plots
 # plt.rc('font', size=14)
 # plt.rc('figure', titlesize=18)
 # plt.rc('axes', labelsize=15)
@@ -25,28 +24,28 @@ plt.style.use('seaborn') # pretty matplotlib plots
 # plt.rc('figure', autolayout=True)
 
 
-def residual_plot(y, results):    
+def residual_plot(y, results):
     # fitted values (need a constant term for intercept)
     model_fitted_y = results.fittedvalues
 
     # model residuals
     if isinstance(results, statsm.discrete.discrete_model.L1BinaryResultsWrapper):
         residuals = results.resid_dev
-    elif isinstance(model, statsm.regression.linear_model.RegressionResultsWrapper):
+    elif isinstance(results, statsm.regression.linear_model.RegressionResultsWrapper):
         residuals = results.resid
     else:
-        raise NotImplementedError('Model results for this type of model: {} is not supported'.format(type(model)))
+        raise NotImplementedError('Model results for this type of model: {} is not supported'.format(type(results)))
 
     # absolute residuals
     model_abs_resid = np.abs(residuals)
-    
+
     fig = plt.figure(1)
     fig.set_figheight(8)
     fig.set_figwidth(12)
 
-    fig.axes[0] = sns.residplot(model_fitted_y, y, 
-                                lowess=True, 
-                                scatter_kws={'alpha': 0.5}, 
+    fig.axes[0] = sns.residplot(model_fitted_y, y,
+                                lowess=True,
+                                scatter_kws={'alpha': 0.5},
                                 line_kws={'color': 'red', 'lw': 1, 'alpha': 0.8})
 
     fig.axes[0].set_title('Residuals vs Fitted')
@@ -59,9 +58,10 @@ def residual_plot(y, results):
 
     for i in abs_resid_top_3.index:
         fig.axes[0].annotate(i, xy=(model_fitted_y[i], residuals[i]))
-    
+
     plt.close()
     return fig
+
 
 def qq_plot(results):
     # normalized residuals
@@ -75,23 +75,23 @@ def qq_plot(results):
 
     fig.axes[0].set_title('Normal Q-Q')
     fig.axes[0].set_xlabel('Theoretical Quantiles')
-    fig.axes[0].set_ylabel('Standardized Residuals');
+    fig.axes[0].set_ylabel('Standardized Residuals')
 
     # annotations
     abs_norm_resid = np.flip(np.argsort(np.abs(model_norm_residuals)), 0)
     abs_norm_resid_top_3 = abs_norm_resid[:3]
 
     for r, i in enumerate(abs_norm_resid_top_3):
-        fig.axes[0].annotate(i, xy=(np.flip(QQ.theoretical_quantiles, 0)[r], 
-                                    model_norm_residuals[i]))
-    
+        fig.axes[0].annotate(i, xy=(np.flip(QQ.theoretical_quantiles, 0)[r], model_norm_residuals[i]))
+
     plt.close()
     return fig
+
 
 def scale_location_plot(df, results):
     # fitted values (need a constant term for intercept)
     model_fitted_y = results.fittedvalues
-    
+
     # normalized residuals
     model_norm_residuals = results.get_influence().resid_studentized_internal
 
@@ -103,25 +103,26 @@ def scale_location_plot(df, results):
     fig.set_figwidth(12)
 
     plt.scatter(model_fitted_y, model_norm_residuals_abs_sqrt, alpha=0.5)
-    sns.regplot(model_fitted_y, model_norm_residuals_abs_sqrt, 
-                scatter=False, 
-                ci=False, 
+    sns.regplot(model_fitted_y, model_norm_residuals_abs_sqrt,
+                scatter=False,
+                ci=False,
                 lowess=True,
                 line_kws={'color': 'red', 'lw': 1, 'alpha': 0.8})
 
     fig.axes[0].set_title('Scale-Location')
     fig.axes[0].set_xlabel('Fitted values')
-    fig.axes[0].set_ylabel('$\sqrt{|Standardized Residuals|}$');
+    fig.axes[0].set_ylabel('$\sqrt{|Standardized Residuals|}$')
 
     # annotations
     abs_sq_norm_resid = np.flip(np.argsort(model_norm_residuals_abs_sqrt), 0)
     abs_sq_norm_resid_top_3 = abs_sq_norm_resid[:3]
 
-    for i in abs_norm_resid_top_3:
+    for i in abs_sq_norm_resid_top_3:
         fig.axes[0].annotate(i, xy=(model_fitted_y[i], model_norm_residuals_abs_sqrt[i]))
-    
+
     plt.close()
     return fig
+
 
 def leverage_plot(results):
     """
@@ -132,23 +133,23 @@ def leverage_plot(results):
     """
     # normalized residuals
     model_norm_residuals = results.get_influence().resid_studentized_internal
-    
+
     # leverage, from statsmodels internals
     model_leverage = results.get_influence().hat_matrix_diag
 
     # cook's distance, from statsmodels internals
     model_cooks = results.get_influence().cooks_distance[0]
-    
+
     fig = plt.figure(4)
     fig.set_figheight(8)
     fig.set_figwidth(12)
 
     plt.scatter(model_leverage, model_norm_residuals, alpha=0.5)
-    sns.regplot(model_leverage, model_norm_residuals, 
-                scatter=False, 
-                ci=False, 
-                lowess=True,
-                line_kws={'color': 'red', 'lw': 1, 'alpha': 0.8})
+    sns.regplot(model_leverage, model_norm_residuals,
+        scatter=False,
+        ci=False,
+        lowess=True,
+        line_kws={'color': 'red', 'lw': 1, 'alpha': 0.8})
 
     fig.axes[0].set_xlim(0, 0.20)
     fig.axes[0].set_ylim(-3, 5)
@@ -168,17 +169,18 @@ def leverage_plot(results):
         y = formula(x)
         plt.plot(x, y, label=label, lw=1, ls='--', color='red')
 
-    p = len(results.params) # number of model parameters
+    p = len(results.params)  # number of model parameters
 
-    graph(lambda x: np.sqrt((0.5 * p * (1 - x)) / x), 
-          np.linspace(0.001, 0.200, 50), 
-          'Cook\'s distance') # 0.5 line
-    graph(lambda x: np.sqrt((1 * p * (1 - x)) / x), 
-          np.linspace(0.001, 0.200, 50)) # 1 line
+    graph(lambda x: np.sqrt((0.5 * p * (1 - x)) / x),
+          np.linspace(0.001, 0.200, 50),
+          'Cook\'s distance')  # 0.5 line
+    graph(lambda x: np.sqrt((1 * p * (1 - x)) / x),
+          np.linspace(0.001, 0.200, 50))  # 1 line
     plt.legend(loc='upper right')
-    
+
     plt.close()
     return fig
+
 
 def tjur_r2(results, labels, pos=1, neg=0):
     """
@@ -195,11 +197,12 @@ def tjur_r2(results, labels, pos=1, neg=0):
     """
     # convert log odds to estimated probabilities
     y_prob = np.exp(results.fittedvalues)
-    y_prob = y_prob/(1+y_prob)
-    
+    y_prob = y_prob / (1 + y_prob)
+
     # calculate difference in mean estimated probability of each binary response.
     y = np.mean(y_prob.where(labels == pos)) - np.mean(y_prob.where(labels == neg))
     return y
+
 
 def squared_pearson_correlation_r2(results, labels, pos=1, neg=0):
     """
@@ -212,20 +215,21 @@ def squared_pearson_correlation_r2(results, labels, pos=1, neg=0):
         labels[labels == pos] = 1
     if neg != 0:
         labels[labels == neg] = 0
-    
+
     # convert log odds to estimated probabilities
     y_prob = np.exp(results.fittedvalues)
-    y_prob = y_prob/(1+y_prob)
-    
+    y_prob = y_prob / (1 + y_prob)
+
     # calculate the numerator of the formula
     n = len(labels)
     pos_prob = np.sum(labels) / n
     top = np.sum(y_prob * labels) - (n * pos_prob**2)
-    
+
     # calculate the denominator of the formula
     bottom = np.sqrt(n * pos_prob * (1 - pos_prob) * np.sum((y_prob - pos_prob)**2))
-    
+
     return top / bottom
+
 
 def sum_of_squares_r2(results, labels, pos=1, neg=0):
     """
@@ -241,17 +245,18 @@ def sum_of_squares_r2(results, labels, pos=1, neg=0):
 
     # convert log odds to estimated probabilities
     y_prob = np.exp(results.fittedvalues)
-    y_prob = y_prob/(1+y_prob)
-    
+    y_prob = y_prob / (1 + y_prob)
+
     # calculate the numerator of the formula
     n = len(labels)
     pos_prob = np.sum(labels) / n
     top = 2 * np.sum(y_prob * labels) - np.sum(y_prob**2) - (n * pos_prob**2)
-    
+
     # calculate the denominator of the formula
     bottom = n * pos_prob * (1 - pos_prob)
-    
+
     return top / bottom
+
 
 def logit_evaluation_summary(results, labels, pos=1, neg=0):
     return pd.DataFrame([
@@ -259,6 +264,7 @@ def logit_evaluation_summary(results, labels, pos=1, neg=0):
         , ('Tjur R-squared', tjur_r2(results, labels, pos, neg))
         , ('Squared Pearson Correlation R-squared', squared_pearson_correlation_r2(results, labels, pos, neg))
         , ('Sum-of-squares R-squared', sum_of_squares_r2(results, labels, pos, neg))])
+
 
 def logit_summary_params(results, alpha=0.05, alphas=np.array([0.1, 0.05, 0.01, 0.001]), margeff_kwargs={}):
     assert all(isinstance(a, float) and 0. <= a <= 1. for a in alphas), 'ValueError: alphas.'
@@ -286,9 +292,10 @@ def logit_summary_params(results, alpha=0.05, alphas=np.array([0.1, 0.05, 0.01, 
     params = statsm.iolib.summary2.summary_params(results)
     params.insert(1, 'OddsRat.', np.exp(params['Coef.']))
     params.insert(2, 'ME', results.get_margeff(**margeff_kwargs).summary_frame()['dy/dx'])
-    params['Sign.'] = results.pvalues.apply(lambda x: '*'*np.sum(x < alphas))
+    params['Sign.'] = results.pvalues.apply(lambda x: '*' * np.sum(x < alphas))
     # params = params.applymap(lambda x: "%.4f" % x)
     return params
+
 
 def logit_summary(results, labels=None, pos=1, neg=0, float_format='%.4f', summary_kwargs={}):
     summary = results.summary2()
@@ -297,11 +304,12 @@ def logit_summary(results, labels=None, pos=1, neg=0, float_format='%.4f', summa
     if 'alphas' not in summary_kwargs:
         summary.add_text('Significance level: *: p < 0.1; **: p < 0.05; ***: p < 0.01; ****: p < 0.001')
     else:
-        summary.add_text('Significance level: ' + ' '.join(['*'*(i+1) + ': p < {};'.format(a) for i, a in enumerate(summary_kwargs.alphas)]))
+        summary.add_text('Significance level: ' + ' '.join(['*' * (i + 1) + ': p < {};'.format(a) for i, a in enumerate(summary_kwargs.alphas)]))
     if labels is not None:
-        summary.add_df(logit_evaluation_summary(results, labels, pos, neg), 
+        summary.add_df(logit_evaluation_summary(results, labels, pos, neg),
             header=False, index=False, float_format=float_format)
     return summary
+
 
 def plot_coefficients(model, ci=95):
     """
@@ -327,8 +335,7 @@ def plot_coefficients(model, ci=95):
 
     # Figure out the dimensions of the plot
     h, w = mpl.rcParams["figure.figsize"]
-    f, ax = plt.subplots(1, 1, figsize=(
-    n_terms * (1 / 2), n_terms * (h / (4 * (n_terms / 5)))))
+    f, ax = plt.subplots(1, 1, figsize=(n_terms * (1 / 2), n_terms * (h / (4 * (n_terms / 5)))))
     for i, term in enumerate(coefs.index):
         low, high = cis.loc[term]
         ax.plot([low, high], [i, i], solid_capstyle="round", lw=2.5,
@@ -340,10 +347,11 @@ def plot_coefficients(model, ci=95):
     ax.set_yticklabels(coef_names)
     plt.setp(ax.get_xticklabels(), rotation=90)
 
+
 def plot_logit_marginal_effects(results, ci=95):
     """
     Plots coefficients and their confidence intervals for a statsmodels logit
-    model. Based on (but heavily modified and simplified) 
+    model. Based on (but heavily modified and simplified)
     seaborn's now deprecated coefplot.
     See https://github.com/mwaskom/seaborn/blob/master/seaborn/regression.py
 
@@ -361,14 +369,13 @@ def plot_logit_marginal_effects(results, ci=95):
     margeff = results.get_margeff()
     cis = margeff.conf_int(alpha)
     coefs = results.get_margeff().margeff
-    constant_cols_idx = np.argwhere(np.apply_along_axis(lambda x: np.unique(x).shape[0] == 1, 0, results.model.exog) == True).ravel()
+    constant_cols_idx = np.argwhere(np.apply_along_axis(lambda x: np.unique(x).shape[0] == 1, 0, results.model.exog)).ravel()
     coef_names = np.delete(results.params.index, constant_cols_idx)
     n_terms = len(coefs)
 
     # Figure out the dimensions of the plot
     h, w = mpl.rcParams["figure.figsize"]
-    f, ax = plt.subplots(1, 1, figsize=(
-    n_terms * (1 / 2), n_terms * (h / (4 * (n_terms / 5)))))
+    f, ax = plt.subplots(1, 1, figsize=(n_terms * (1 / 2), n_terms * (h / (4 * (n_terms / 5)))))
     for i, term in enumerate(coef_names):
         low, high = cis[i]
         ax.plot([low, high], [i, i], solid_capstyle="round", lw=2.5,
@@ -378,6 +385,7 @@ def plot_logit_marginal_effects(results, ci=95):
     ax.set_yticks(range(n_terms))
     ax.set_yticklabels(coef_names)
     plt.setp(ax.get_xticklabels(), rotation=90)
+
 
 def summary_to_latex(results):
     stuff = results.as_latex()
