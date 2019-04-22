@@ -6,19 +6,29 @@
         author: Suraj Iyer
 """
 
+from collections.abc import MutableMapping
 import dill
 import json
 
 
-class Trie:
+class Trie(MutableMapping):
     # init Trie class
     def __init__(self):
         self.root = self.getNode()
+
+        # the last added word node (can keep changing depending on last key added)
+        self._prev_node = self.root
+
+        # number of words in trie
+        self.n_words = 0
 
     def getNode(self):
         return {"isEndOfWord": False, "children": {}}
 
     def add(self, word, additional_keys=None):
+        assert isinstance(word, str), '{} must be a string'.format(word)
+        assert isinstance(additional_keys, dict)
+
         current = self.root
         for ch in word:
 
@@ -29,11 +39,24 @@ class Trie:
                 current["children"][ch] = node
 
             current = node
+
         current["isEndOfWord"] = True
-        
+        current['word'] = word
+
         # add additional info about words, e.g., count
         if additional_keys:
             current.update(additional_keys)
+
+        # If word does not already exist
+        if 'prev_node' not in current:
+            # build a unidirectional linked-list between every consequent EOW node
+            current['prev_node'] = self._prev_node
+            self._prev_node['next_node'] = current
+            self._prev_node = current
+
+            # increment n_words
+            self.n_words += 1
+
         return self
 
     def addAll(self, words):
@@ -41,46 +64,61 @@ class Trie:
             word = next(words)
         except:
             return self
+
         if isinstance(word, dict):
+
             self.add(word.pop('word'), word)
             for word in words:
                 self.add(word.pop('word'), word)
+
         elif isinstance(word, str):
+
             self.add(word)
             for word in words:
                 self.add(word)
+
         else:
             raise ValueError('words format incorrect.')
+
         return self
 
-    def find(self, word, additional_keys=None):
-        if isinstance(additional_keys, str):
-            additional_keys = [additional_keys]
+    def find(self, word):
+        assert isinstance(word, str), '{} must be a string'.format(word)
+
         current = self.root
         for ch in word:
-            if not (ch in current["children"]):
+            if ch not in current["children"]:
                 return False
             node = current["children"][ch]
             current = node
 
-        if not additional_keys or not current["isEndOfWord"]:
-            return current["isEndOfWord"]
-        else:
-            return {arg: current[arg] for arg in set(additional_keys).intersection(current.keys())}
+        return current["isEndOfWord"], {k: current[k] for k in current.keys() if k not in ('word', 'children', 'isEndOfWord', 'prev_node', 'next_node')}
 
-    def get(self, word, additional_key, default=None):
-        x = self.find(word, additional_key)
-        if x is False and default is None:
-            raise ValueError('{} not found'.format('word'))
-        elif default is None:
-            raise ValueError('{} does not contain key {}'.format(word, additional_key))
+    def get(self, word, additional_key=None, default=None):
+        isEndOfWord, node = self.find(word)
+
+        if isEndOfWord:
+            if additional_key is None:
+                return node
+            elif additional_key not in node:
+                if not default:
+                    raise ValueError('{} does not contain key {}'.format(word, additional_key))
+                else:
+                    return default
+            else:
+                return node[additional_key]
         else:
-            return default if x is False else x[additional_key]
+            if not default:
+                raise ValueError('{} not found'.format('word'))
+            else:
+                return default
 
     def findPrefix(self, word):
+        assert isinstance(word, str), '{} must be a string'.format(word)
+
         current = self.root
         for ch in word:
-            if not (ch in current["children"]):
+            if ch not in current["children"]:
                 return False
             node = current["children"][ch]
             current = node
@@ -89,23 +127,23 @@ class Trie:
         return bool(current["children"])
 
     def find_within_distance(self, word, dist=2):
-        assert isinstance(word, str)
+        assert isinstance(word, str), '{} must be a string'.format(word)
         from .utils import edit_dist
-        return [word for word in edit_dist(word, dist) if self.find(word)]
-
-    def remove(self, word):
-        self._delete(self.root, word, 0)
-        return self
+        return [word for word in edit_dist(word, dist) if self.find(word)[0]]
 
     def _delete(self, current, word, index):
+        assert isinstance(word, str), '{} must be a string'.format(word)
+
         if(index == len(word)):
             if not current["isEndOfWord"]:
                 return False
             current["isEndOfWord"] = False
+            current['prev_node']['next_node'] = current['next_node']
+            current['next_node']['prev_node'] = current['prev_node']
             return len(current["children"].keys()) == 0
 
         ch = word[index]
-        if not (ch in current["children"]):
+        if ch not in current["children"]:
             return False
         node = current["children"][ch]
 
@@ -116,6 +154,15 @@ class Trie:
             return len(current["children"].keys()) == 0
 
         return False
+
+    def remove(self, word):
+        self._delete(self.root, word, 0)
+        self.n_words -= 1
+        return self
+
+    def removeAll(self, words):
+        for word in words:
+            self.remove(word)
 
     def save_to_pickle(self, file_name):
         f = open(file_name + ".pkl", "wb")
@@ -139,6 +186,37 @@ class Trie:
         self.root = json.load(json_file)
         json_file.close()
         return self
+
+    def __getitem__(self, key):
+        if isinstance(key, str):
+            key = key.split('__')
+            if len(key) < 2:
+                return self.get(key[0])
+            else:
+                val = self.get(key[0], key[1])
+                key.pop(0)
+                key.pop(0)
+                for k in key:
+                    val = val[k]
+                return val
+        else:
+            return self.get(key)
+
+    def __setitem__(self, key, value):
+        self.add(key, value)
+
+    def __delitem__(self, key):
+        self.remove(key)
+
+    def __iter__(self):
+        current = self.root['next_node']
+        while 'next_node' in current:
+            yield current['word']
+            current = current['next_node']
+        yield current['word']
+
+    def __len__(self):
+        return self.n_words
 
     def __contains__(self, key):
         return self.find(key)

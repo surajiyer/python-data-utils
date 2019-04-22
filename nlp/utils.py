@@ -16,7 +16,9 @@ from sklearn.cluster import AffinityPropagation
 
 def words(text): return re.findall(r'\w+', text.lower())
 
+
 def build_words_from_corpus_file(file_path): return Counter(words(open(file_path).read()))
+
 
 def build_words_from_dict_file(file_path, header=False, delimiter=" "):
     with open(file_path, 'r', encoding='utf8') as f:
@@ -24,6 +26,7 @@ def build_words_from_dict_file(file_path, header=False, delimiter=" "):
             f.readline()
         words = f.readlines()
     return set(line.split(delimiter)[0] for line in words)
+
 
 def build_trie_from_dict_file(file_path, header=False, columns=[], delimiter=" ", callback=None):
     model = Trie()
@@ -54,11 +57,13 @@ def build_trie_from_dict_file(file_path, header=False, columns=[], delimiter=" "
     else:
         return model, value
 
+
 def build_trie_from_corpus_file(file_path):
     lang_dict = Counter(words(open(file_path).read()))
     model = Trie()
-    model.addAll(({'word': word, 'count': count} for word, count in Counter.items()))
+    model.addAll(({'word': word, 'count': count} for word, count in lang_dict.items()))
     return model
+
 
 def words_dictionary_filepath(lang='en', size='50k'):
     """
@@ -70,6 +75,7 @@ def words_dictionary_filepath(lang='en', size='50k'):
     """
     return join(dirname(__file__), lang, '{}_{}.txt'.format(lang, size))
 
+
 def words_dictionary_trie_filepath(lang='en', size='50k'):
     """
         lang: str, default='en'
@@ -79,6 +85,7 @@ def words_dictionary_trie_filepath(lang='en', size='50k'):
             Full dictionary is very large and can result in large running times.
     """
     return join(dirname(__file__), lang, '{}_{}_trie'.format(lang, size))
+
 
 def words_set_dictionary(lang='en', size='50k'):
     """
@@ -90,6 +97,7 @@ def words_set_dictionary(lang='en', size='50k'):
     """
     return build_words_from_dict_file(words_dictionary_filepath(lang, size))
 
+
 def words_trie_dictionary(lang='en', size='50k'):
     """
         lang: str, default='en'
@@ -100,29 +108,38 @@ def words_trie_dictionary(lang='en', size='50k'):
     """
     return build_trie_from_dict_file(words_dictionary_filepath(lang, size), header='include')
 
+
 def cleanhtml(raw_html):
+    assert isinstance(raw_html, str), '{} must be a string'.format(raw_html)
     cleanr = re.compile('<.*?>')
     cleantext = re.sub(cleanr, '', raw_html)
     return cleantext
 
+
 def reduce_lengthening(text):
     """Correcting more than twice repeated characters in words."""
+    assert isinstance(text, str), '{} must be a string'.format(text)
     pattern = re.compile(r"(.)\1{2,}")
     return pattern.sub(r"\1\1", text)
 
+
 def edits_1(word):
     """All edits that are one edit away from `word`."""
-    letters    = 'abcdefghijklmnopqrstuvwxyz'
-    splits     = [(word[:i], word[i:])    for i in range(len(word) + 1)]
-    deletes    = [L + R[1:]               for L, R in splits if R]
-    transposes = [L + R[1] + R[0] + R[2:] for L, R in splits if len(R)>1]
-    replaces   = [L + c + R[1:]           for L, R in splits if R for c in letters]
-    inserts    = [L + c + R               for L, R in splits for c in letters]
+    assert isinstance(word, str), '{} must be a string'.format(word)
+    letters         = 'abcdefghijklmnopqrstuvwxyz'
+    splits           = [(word[:i], word[i:])            for i in range(len(word) + 1)]
+    deletes       = [L + R[1:]                             for L, R in splits if R]
+    transposes = [L + R[1] + R[0] + R[2:]        for L, R in splits if len(R)>1]
+    replaces     = [L + c + R[1:]                       for L, R in splits if R for c in letters]
+    inserts         = [L + c + R                            for L, R in splits for c in letters]
     return set(deletes + transposes + replaces + inserts)
+
 
 def edits_2(word):
     """All edits that are two edits away from `word`."""
+    assert isinstance(word, str), '{} must be a string'.format(word)
     return (e2 for e1 in edits_1(word) for e2 in edits_1(e1))
+
 
 def _edit_dist(word, dist=2, k=None):
     """All edits that are `n` edits away from `word`."""
@@ -131,24 +148,36 @@ def _edit_dist(word, dist=2, k=None):
     assert dist > 0 and k > 0
     if k == 1:
         return edits_1(word)
-    new_words = (w2 for w1 in edits_1(word) for w2 in _edit_dist(w1, dist, k-1))
+    new_words = (w2 for w1 in edits_1(word) for w2 in _edit_dist(w1, dist, k - 1))
     return list(set(new_words)) if k == dist else new_words
 
+
 def edit_dist(word, dist=2):
+    assert isinstance(word, str), '{} must be a string'.format(word)
+    assert isinstance(dist, int)
     return _edit_dist(word, dist)
 
+
 def cluster_words_by_edit_distance1(words, dist=2):
+    assert isinstance(words, (list, tuple)) and any(isinstance(w, str) for w in words), 'words must be an iterable of strings'
+    assert isinstance(dist, int)
     cluster = dict()
     for i, w in enumerate(words):
-        x = [words[j] for j in range(i+1, len(words)) if distance.levenshtein(w,words[j]) == 1]
+        x = [words[j] for j in range(i + 1, len(words)) if distance.levenshtein(w, words[j]) == dist]
         if len(x) > 0:
             cluster[w] = x
     return cluster
 
+
 def cluster_words_by_edit_distance2(words, verbose=True, **kwargs):
-    # from the paper: L Frey, Brendan J., and Delbert Dueck. "Clustering by passing messages between data points." 
-    # science 315.5814 (2007): 972-976..
-    lev_similarity = -1*np.array([[distance.levenshtein(w1, w2) for w1 in words] for w2 in words])
+    """
+    Paper:
+        L Frey, Brendan J., and Delbert Dueck. "Clustering by passing messages between data points."
+        science 315.5814 (2007): 972-976..
+    """
+    assert isinstance(words, (list, tuple)) and any(isinstance(w, str) for w in words), 'words must be an iterable of strings'
+    assert isinstance(verbose, bool)
+    lev_similarity = -1 * np.array([[distance.levenshtein(w1, w2) for w1 in words] for w2 in words])
     affprop = AffinityPropagation(affinity="precomputed", **kwargs)
     affprop.fit(lev_similarity)
     clusters = dict()
@@ -159,5 +188,7 @@ def cluster_words_by_edit_distance2(words, verbose=True, **kwargs):
             print(" - *%s:* %s" % (exemplar, ", ".join(clusters[exemplar])))
     return clusters
 
+
 def count_words(sentence, delimiter=' '):
+    assert isinstance(sentence, str), '{} must be a string'.format(sentence)
     return len(sentence.split(delimiter))
