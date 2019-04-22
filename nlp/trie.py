@@ -12,7 +12,12 @@ import json
 
 
 class Trie(MutableMapping):
-    # init Trie class
+    """
+    Trie class
+    """
+
+    _special_keys = frozenset(('word', 'children', 'isEndOfWord', 'prev_node', 'next_node'))
+
     def __init__(self):
         self.root = self.getNode()
 
@@ -27,7 +32,7 @@ class Trie(MutableMapping):
 
     def add(self, word, additional_keys=None):
         assert isinstance(word, str), '{} must be a string'.format(word)
-        assert isinstance(additional_keys, dict)
+        assert isinstance(additional_keys, dict) and Trie._special_keys.intersection(additional_keys) == set()
 
         current = self.root
         for ch in word:
@@ -92,7 +97,7 @@ class Trie(MutableMapping):
             node = current["children"][ch]
             current = node
 
-        return current["isEndOfWord"], {k: current[k] for k in current.keys() if k not in ('word', 'children', 'isEndOfWord', 'prev_node', 'next_node')}
+        return current["isEndOfWord"], {k: current[k] for k in current.keys() if k not in Trie._special_keys}
 
     def get(self, word, additional_key=None, default=None):
         isEndOfWord, node = self.find(word)
