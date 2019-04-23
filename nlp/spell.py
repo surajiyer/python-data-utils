@@ -24,6 +24,8 @@ class SpellCheck:
             self.WORDS, self.N = utils.build_trie_from_dict_file(dict_file_path, header='include', delimiter=delimiter,
                                                                  callback=lambda f: sum(int(line.split(delimiter)[1]) for line in f.readlines()))
             self.WORDS.root['count'] = self.N
+            for word in self.WORDS:
+                self.WORDS.add(word, {'count': int(self.WORDS['{}__count'.format(word)])}, update=True)
         elif file_type == "json":
             self.WORDS = utils.Trie().load_from_json(dict_file_path)
             self.N = self.WORDS.root['count']

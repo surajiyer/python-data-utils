@@ -126,7 +126,7 @@ def scale_location_plot(df, results):
 
 def leverage_plot(results):
     """
-    This plot shows if any outliers have influence over the regression fit. 
+    This plot shows if any outliers have influence over the regression fit.
     Anything outside the group and outside “Cook’s Distance” lines, may have an influential effect on model fit.
 
     :param results: statsmodel
