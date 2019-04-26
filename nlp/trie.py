@@ -137,7 +137,7 @@ class Trie(MutableMapping):
     def find_within_distance(self, word, dist=2):
         assert isinstance(word, str), 'word must be a string'
         from .utils import edit_dist
-        return [word for word in edit_dist(word, dist) if self.find(word)[0]]
+        return set(word for word in edit_dist(word, dist) if self.find(word)[0])
 
     def _delete(self, current, word, index):
         assert isinstance(word, str), 'word must be a string'

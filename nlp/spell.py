@@ -45,10 +45,15 @@ class SpellCheck:
     #     """The subset of `words` that appear in the dictionary of WORDS."""
     #     return set(w for w in words if w in self.WORDS)
 
-    def candidates(self, word, dist=2):
+    def candidates(self, word, max_dist=2):
         """Generate possible spelling corrections for word."""
         # return (self.known([word]) or self.known(utils.edit_dist(word, dist)) or [word])
-        return self.WORDS.find_within_distance(word, dist) + ([word] if self.WORDS.find(word) else [])
+        assert isinstance(max_dist, int) and max_dist > 0
+        known = set()
+        for dist in range(1, max_dist+1):
+            known |= self.WORDS.find_within_distance(word, dist)
+        known |= set([word])
+        return known
 
     def correct_word(self, word, dist=2, error='ignore'):
         """Most probable spelling correction for word."""
