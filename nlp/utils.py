@@ -192,3 +192,60 @@ def cluster_words_by_edit_distance2(words, verbose=True, **kwargs):
 def count_words(sentence, delimiter=' '):
     assert isinstance(sentence, str), '{} must be a string'.format(sentence)
     return len(sentence.split(delimiter))
+
+
+def join_bigrams_with_replacements(s, replacements=lambda w, default: default):
+    """
+    Function to join a list of bigrams back into a sentence taking into account
+    unigram replacements for bigrams.
+
+    working version: 1.0
+    # does not work with generator input
+    skip = False
+    string = ""
+    n = len(s)
+    for i, w in enumerate(s):
+        if skip:
+            skip = False
+            if i == n-1:
+                string = string + " " + w[1]
+            continue
+        w = replacements(" ".join(w), w)
+        if isinstance(w, str):
+            string = string + " " + w
+            skip = True
+        else:
+            string = string + " " + w[0]
+    return string
+
+    param:
+        s: iterable of list of strings
+            Example: [("I", "have"), ("have", "to"), ("to", "go")]
+        replacements:
+            Function that takes the following parameters. By default, it returns the default
+            value which simply joins all the bigrams together.
+                w: string
+                    A bigram string. Example: "wi fi"
+                default:
+                    A default value to return in case no replacement available.
+                returns: string
+                    A replacement string, e.g., "wifi"
+        returns: string
+            A string sentence joining all bigrams correctly including the replacements (if any).
+    """
+    s = iter(s)
+    first = next(s, None)
+    if first is None:
+        return ""
+    first = replacements(" ".join(first), first)
+    string = first if isinstance(first, str) else first[0] + " " + first[1]
+    prev_string = "" if isinstance(first, str) else first[0]
+    for w in s:
+        w = replacements(" ".join(w), w)
+        if isinstance(w, str):
+            string = prev_string + " " + w
+            prev_string = string
+        else:
+            prev_string = string
+            string += " " + w[1]
+    return string
