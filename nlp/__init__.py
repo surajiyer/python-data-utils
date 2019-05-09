@@ -5,5 +5,4 @@
     author: Suraj Iyer
 """
 
-from . import utils
-from .spell import *
+__all__ = ['spell_checking', 'utils', 'trie']

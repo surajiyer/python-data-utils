@@ -350,3 +350,17 @@ def correct_word_compounding(dfs, language_dictionary, split_on_both_accurate=Tr
     return tokens.apply(lambda s: [replacements.get(w, w) for w in s])\
         .apply(nltk.bigrams)\
         .apply(join_bigrams_with_replacements, replacements=replacements.get)
+
+
+class RegexPattern:
+    WholeWordOnly = lambda w: r'\b{}\b'.format(w)
+    Linebreak = r'\r+|\n+'
+    Number = r'[0-9]+'
+    TwoOrMoreSpaces = r'\s{2,}'
+    Email = WholeWordOnly(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
+    NL_pc4 = WholeWordOnly(r'[0-9]{4}\s?\w{2}')
+    SingleWordCharacter = WholeWordOnly(r'\w')
+    Fractions = r"[0-9]+\.[0-9]+"
+    TimeOfDay = r"[0-2]?[0-9]\:[0-9]{2}\s?(am|pm|AM|PM)?"
+    Unicode = r"[^\x00-\x7F]"
+    Quotes = lambda x: r"(\"{0}\"|\'{0}\')".format(x)
