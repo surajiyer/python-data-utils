@@ -314,7 +314,7 @@ def logit_summary(results, labels=None, pos=1, neg=0, float_format='%.4f', summa
 def plot_coefficients(model, ci=95):
     """
     Plots coefficients and their confidence intervals for a statsmodels OLS/Logit
-    model. Based on (but heavily modified and simplified) 
+    model. Based on (but heavily modified and simplified)
     seaborn's now deprecated coefplot.
     See https://github.com/mwaskom/seaborn/blob/master/seaborn/regression.py
 

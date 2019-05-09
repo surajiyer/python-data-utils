@@ -70,6 +70,10 @@ def build_trie_from_corpus_file(file_path):
     return model
 
 
+def words_data_folder_path(lang='en'):
+    return join(dirname(__file__), 'data', 'dictionaries', lang)
+
+
 def words_dictionary_filepath(lang='en', size='50k'):
     """
         lang: str, default='en'
@@ -78,7 +82,7 @@ def words_dictionary_filepath(lang='en', size='50k'):
             Use the small dictionary containing only top '50k' words or 'full' dictionary.
             Full dictionary is very large and can result in large running times.
     """
-    return join(dirname(__file__), lang, '{}_{}.txt'.format(lang, size))
+    return join(words_data_folder_path(lang), '{}_{}.txt'.format(lang, size))
 
 
 def words_dictionary_trie_filepath(lang='en', size='50k'):
@@ -89,7 +93,7 @@ def words_dictionary_trie_filepath(lang='en', size='50k'):
             Use the small dictionary containing only top '50k' words or 'full' dictionary.
             Full dictionary is very large and can result in large running times.
     """
-    return join(dirname(__file__), lang, '{}_{}_trie'.format(lang, size))
+    return join(words_data_folder_path(lang), '{}_{}_trie'.format(lang, size))
 
 
 def words_set_dictionary(lang='en', size='50k'):
