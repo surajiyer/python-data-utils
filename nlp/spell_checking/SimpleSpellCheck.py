@@ -10,29 +10,39 @@
 from . import utils
 
 
-class SpellCheck:
+class SimpleSpellCheck:
     """
-    Spell checker
+    Spell checker using basic Peter Norvig's edit distance with additional support for Trie-based word dictionaries.
     """
 
-    def __init__(self, dict_file_path, file_type="csv", delimiter=" "):
+    def __init__(self, dictionary_file, file_type="csv", delimiter=" "):
         # Read words from dictionary
-        # self.WORDS = {line.split(' ')[0]: int(line.split(' ')[1]) for line in open(dict_file_path).readlines()}
+        # self.WORDS = {line.split(' ')[0]: int(line.split(' ')[1]) for line in open(dictionary_file).readlines()}
         # self.N = sum(self.WORDS.values())
         file_type = file_type.lower()
-        if dict_file_path is None or file_type == "csv":
-            self.WORDS, self.N = utils.build_trie_from_dict_file(dict_file_path, header='include', delimiter=delimiter,
+
+        if dictionary_file is None or file_type == "csv":
+
+            self.WORDS, self.N = utils.build_trie_from_dict_file(dictionary_file, header='include', delimiter=delimiter,
                                                                  callback=lambda f: sum(int(line.split(delimiter)[1]) for line in f.readlines()))
             self.WORDS.root['count'] = self.N
+
+            # Update the counts to int type
             for word in self.WORDS:
                 self.WORDS.add(word, {'count': int(self.WORDS['{}__count'.format(word)])}, update=True)
+
         elif file_type == "json":
-            self.WORDS = utils.Trie().load_from_json(dict_file_path)
+
+            self.WORDS = utils.Trie().load_from_json(dictionary_file)
             self.N = self.WORDS.root['count']
+
         elif file_type == "pkl" or file_type == "pickle":
-            self.WORDS = utils.Trie().load_from_pickle(dict_file_path)
+
+            self.WORDS = utils.Trie().load_from_pickle(dictionary_file)
             self.N = self.WORDS.root['count']
+
         else:
+
             raise ValueError("Unsupported file type: {}".format(file_type))
 
     def P(self, word, N=None):
@@ -50,7 +60,7 @@ class SpellCheck:
         # return (self.known([word]) or self.known(utils.edit_dist(word, dist)) or [word])
         assert isinstance(max_dist, int) and max_dist > 0
         known = set()
-        for dist in range(1, max_dist+1):
+        for dist in range(1, max_dist + 1):
             known |= self.WORDS.find_within_distance(word, dist)
         known |= set([word])
         return known
