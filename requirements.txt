@@ -1,4 +1,4 @@
-## Favourite Data Science pakcages
+## Basic Data Science packages
 numpy==1.16.2
 scipy==1.2.1
 pandas==0.24.2
@@ -48,3 +48,6 @@ nltk
 spacy
 # python-frog
 unidecode
+symspellpy
+fuzzywuzzy
+beautifulsoup4
