@@ -15,38 +15,48 @@ class SimpleSpellCheck:
     Spell checker using basic Peter Norvig's edit distance with additional support for Trie-based word dictionaries.
     """
 
-    def __init__(self, dictionary_file, file_type="csv", delimiter=" "):
-        # Read words from dictionary
-        # self.WORDS = {line.split(' ')[0]: int(line.split(' ')[1]) for line in open(dictionary_file).readlines()}
-        # self.N = sum(self.WORDS.values())
-        file_type = file_type.lower()
-
-        if dictionary_file is None or file_type == "csv":
-
-            self.WORDS, self.N = utils.build_trie_from_dict_file(dictionary_file, header='include', delimiter=delimiter,
-                                                                 callback=lambda f: sum(int(line.split(delimiter)[1]) for line in f.readlines()))
-            self.WORDS.root['count'] = self.N
-
-            # Update the counts to int type
-            for word in self.WORDS:
-                self.WORDS.add(word, {'count': int(self.WORDS['{}__count'.format(word)])}, update=True)
-
-        elif file_type == "json":
-
-            self.WORDS = utils.Trie().load_from_json(dictionary_file)
-            self.N = self.WORDS.root['count']
-
-        elif file_type == "pkl" or file_type == "pickle":
-
-            self.WORDS = utils.Trie().load_from_pickle(dictionary_file)
-            self.N = self.WORDS.root['count']
-
+    @staticmethod
+    def load_from_corpus(corpus, is_file_path):
+        spellcheck = SimpleSpellCheck()
+        if is_file_path:
+            spellcheck.WORDS = utils.build_trie_from_corpus_file(corpus)
         else:
+            spellcheck.WORDS = utils.build_trie_from_corpus(corpus)
+        spellcheck.N = spellcheck.WORDS.root['count']
+        return spellcheck
 
-            raise ValueError("Unsupported file type: {}".format(file_type))
+    @staticmethod
+    def load_from_dictionary_csv(dictionary_file, delimiter=" "):
+        spellcheck = SimpleSpellCheck()
+        spellcheck.WORDS, spellcheck.N = utils.build_trie_from_dict_file(dictionary_file, header='include', delimiter=delimiter,
+                                                                         callback=lambda f: sum(int(line.split(delimiter)[1]) for line in f.readlines()))
+        spellcheck.WORDS.root['count'] = spellcheck.N
+
+        # Update the counts to int type
+        for word in spellcheck.WORDS:
+            spellcheck.WORDS.add(
+                word, {'count': int(spellcheck.WORDS['{}__count'.format(word)])}, update=True)
+
+        return spellcheck
+
+    @staticmethod
+    def load_from_trie(dictionary_file, file_type="pkl"):
+        file_type = file_type.lower()
+        assert any(file_type == x for x in ('pkl', 'json'))
+
+        spellcheck = SimpleSpellCheck()
+
+        if file_type == "json":
+            spellcheck.WORDS = utils.Trie().load_from_json(dictionary_file)
+        elif file_type == "pkl" or file_type == "pickle":
+            spellcheck.WORDS = utils.Trie().load_from_pickle(dictionary_file)
+        spellcheck.N = spellcheck.WORDS.root['count']
+
+        return spellcheck
 
     def P(self, word, N=None):
         """Probability of `word`."""
+        assert all(getattr(self, attr, None) is not None for attr in ['N', 'WORDS']), ''
         if N is None:
             N = self.N
         return int(self.WORDS.get(word, 'count', 0)) / N

@@ -19,7 +19,10 @@ import pandas as pd
 def words(text): return re.findall(r'\w+', text.lower())
 
 
-def build_words_from_corpus_file(file_path): return Counter(words(open(file_path).read()))
+def build_words_from_corpus(corpus): return Counter(words(corpus))
+
+
+def build_words_from_corpus_file(file_path): return build_words_from_corpus(open(file_path).read())
 
 
 def build_words_from_dict_file(file_path, header=False, delimiter=" "):
@@ -62,12 +65,15 @@ def build_trie_from_dict_file(file_path, header=False, columns=[], delimiter=" "
         return model, value
 
 
-def build_trie_from_corpus_file(file_path):
-    lang_dict = Counter(words(open(file_path).read()))
+def build_trie_from_corpus(corpus):
+    lang_dict = build_words_from_corpus(corpus)
     model = Trie()
     model.addAll(({'word': word, 'count': count}
                   for word, count in lang_dict.items()))
     return model
+
+
+def build_trie_from_corpus_file(file_path): return build_trie_from_corpus(open(file_path).read())
 
 
 def words_data_folder_path(lang='en'):
@@ -347,9 +353,13 @@ def correct_word_compounding(dfs, language_dictionary, split_on_both_accurate=Tr
                          for w in bigrams[~make_bigram_mask].iterrows()})
 
     # Make replacements
-    return tokens.apply(lambda s: [replacements.get(w, w) for w in s])\
+    tokens = tokens.apply(lambda s: [replacements.get(w, w) for w in s])
+    tokens.loc[tokens.apply(len) > 1] = tokens.loc[tokens.apply(len) > 1]\
         .apply(nltk.bigrams)\
         .apply(join_bigrams_with_replacements, replacements=replacements.get)
+    tokens.loc[tokens.apply(len) == 1] = tokens.loc[tokens.apply(len) == 1]\
+        .apply(lambda s: "".join(s))
+    return tokens
 
 
 class RegexPattern:
