@@ -364,3 +364,4 @@ class RegexPattern:
     TimeOfDay = r"[0-2]?[0-9]\:[0-9]{2}\s?(am|pm|AM|PM)?"
     Unicode = r"[^\x00-\x7F]"
     Quotes = lambda x: r"(\"{0}\"|\'{0}\')".format(x)
+    URL = r'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)'
