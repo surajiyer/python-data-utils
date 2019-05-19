@@ -6,7 +6,7 @@
 """
 
 import re
-from .trie import *
+from trie import *
 from collections import Counter
 from os.path import dirname, join
 import numpy as np
@@ -19,13 +19,15 @@ import pandas as pd
 def words(text): return re.findall(r'\w+', text.lower())
 
 
-def build_words_from_corpus(corpus): return Counter(words(corpus))
+def create_dictionary(corpus=None, file_path=None):
+    if file_path:
+        corpus = open(file_path).read()
+    if not corpus:
+        raise ValueError('String corpus or file_path (path/to/corpus) must be given.')
+    return Counter(words(corpus))
 
 
-def build_words_from_corpus_file(file_path): return build_words_from_corpus(open(file_path).read())
-
-
-def build_words_from_dict_file(file_path, header=False, delimiter=" "):
+def create_dictionary_from_csv(file_path, header=False, delimiter=" "):
     with open(file_path, 'r', encoding='utf8') as f:
         if header:
             f.readline()
@@ -33,7 +35,7 @@ def build_words_from_dict_file(file_path, header=False, delimiter=" "):
     return set(line.split(delimiter)[0] for line in words)
 
 
-def build_trie_from_dict_file(file_path, header=False, columns=[], delimiter=" ", callback=None):
+def create_trie_dictionary_from_csv(file_path, header=False, columns=[], delimiter=" ", callback=None):
     model = Trie()
     value = None
 
@@ -65,15 +67,14 @@ def build_trie_from_dict_file(file_path, header=False, columns=[], delimiter=" "
         return model, value
 
 
-def build_trie_from_corpus(corpus):
-    lang_dict = build_words_from_corpus(corpus)
+def create_trie_dictionary(corpus=None, file_path=None):
+    if filepath:
+        corpus = open(file_path).read()
+    lang_dict = create_dictionary(corpus)
     model = Trie()
     model.addAll(({'word': word, 'count': count}
                   for word, count in lang_dict.items()))
     return model
-
-
-def build_trie_from_corpus_file(file_path): return build_trie_from_corpus(open(file_path).read())
 
 
 def words_data_folder_path(lang='en'):
@@ -110,7 +111,7 @@ def words_set_dictionary(lang='en', size='50k'):
             Use the small dictionary containing only top '50k' words or 'full' dictionary.
             Full dictionary is very large and can result in large running times.
     """
-    return build_words_from_dict_file(words_dictionary_filepath(lang, size))
+    return create_dictionary_from_csv(words_dictionary_filepath(lang, size))
 
 
 def words_trie_dictionary(lang='en', size='50k'):
@@ -121,7 +122,7 @@ def words_trie_dictionary(lang='en', size='50k'):
             Use the small dictionary containing only top '50k' words or 'full' dictionary.
             Full dictionary is very large and can result in large running times.
     """
-    return build_trie_from_dict_file(words_dictionary_filepath(lang, size), header='include')
+    return create_trie_dictionary_from_csv(words_dictionary_filepath(lang, size), header='include')
 
 
 def cleanhtml(raw_html):
@@ -362,6 +363,18 @@ def correct_word_compounding(dfs, language_dictionary, split_on_both_accurate=Tr
     return tokens
 
 
+def tf_idf(documents):
+    N = len(documents)
+    corpus = " ".join(documents)
+    corpus_deduplicated = " ".join([" ".join(frozenset(d.split(" "))) for d in documents])
+
+    tf = create_dictionary(corpus=corpus)
+    df = create_dictionary(corpus=corpus_deduplicated)
+    tf_idf = {t: tf * np.log(1 + N / df[t]) for t, tf in tf.items()}
+
+    return tf_idf, tf, df
+
+
 class RegexPattern:
     WholeWordOnly = lambda w: r'\b{}\b'.format(w)
     Linebreak = r'\r+|\n+'
@@ -374,7 +387,8 @@ class RegexPattern:
     Unicode = r"[^\x00-\x7F]"
     Quotes = lambda x: r"(\"{0}\"|\'{0}\')".format(x)
     URL = r'(https?:\/\/(www\.)?)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)'
-    SpecialCharacters = r'[`!@#*-+{}\[\]:;|\\,<>\/"]'
+    SpecialCharacters = r'[`!@#*-+{}\[\]:;\'"|\\,<>\/]'
     NumbersWithSuffix = r'[0-9]+(st|th|nd|rd)'
     VersionNumber3N = r"\b(\d+\.)?(\d+\.)?(\*|\d+)\b"
     Copyright = r"\(c\)|®|©|™"
+    ThreePlusRepeatingCharacters = r"([a-z])\1{2,}"
