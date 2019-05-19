@@ -382,3 +382,17 @@ def brier_scorer(**kwargs):
         return np.average(inside_sum)
 
     return make_scorer(brier_score, greater_is_better=False, needs_proba=True, **kwargs)
+
+
+###############################################################################
+# OTHER FUNCTIONS
+###############################################################################
+
+
+def display_topics(model, feature_names, no_top_words):
+    """
+    Display keywords associated with topics detected with topic modeling models, e.g., LDA, TruncatedSVD (LSA) etc.
+    """
+    for topic_idx, topic in enumerate(model.components_):
+        print("Topic {}:".format(topic_idx))
+        print(" ".join([feature_names[i] for i in topic.argsort()[:-no_top_words - 1:-1]]))
