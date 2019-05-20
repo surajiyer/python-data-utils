@@ -6,7 +6,7 @@
 """
 
 import re
-from trie import *
+from .trie import *
 from collections import Counter
 from os.path import dirname, join
 import numpy as np
@@ -14,6 +14,7 @@ import distance
 from sklearn.cluster import AffinityPropagation
 import nltk
 import pandas as pd
+from .contractions import *
 
 
 def words(text): return re.findall(r'\w+', text.lower())
@@ -375,10 +376,28 @@ def tf_idf(documents):
     return tf_idf, tf, df
 
 
+def replace_contractions(text, cDict=english_contractions):
+    """
+    Based on https://gist.github.com/nealrs/96342d8231b75cf4bb82
+
+    :param:
+        text: str
+            Input text
+        cDict: dict (default=english_contractions)
+            Dictionary of contractions (key) and their expanded forms (value).
+    """
+    c_re = re.compile(r'\b(%s)\b' % '|'.join(cDict.keys()))
+
+    def replace(match):
+        return cDict[match.group(0)]
+
+    return c_re.sub(replace, text)
+
+
 class RegexPattern:
     WholeWordOnly = lambda w: r'\b{}\b'.format(w)
     Linebreak = r'\r+|\n+'
-    Number = r"\b[0-9]+([.,][0-9]+)?\b"
+    Number = WholeWordOnly(r"[0-9]+([.,][0-9]+)?")
     TwoOrMoreSpaces = r'\s{2,}'
     Email = WholeWordOnly(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
     NL_pc4 = WholeWordOnly(r'[0-9]{4}\s?\w{2}')
@@ -392,3 +411,4 @@ class RegexPattern:
     VersionNumber3N = r"\b(\d+\.)?(\d+\.)?(\*|\d+)\b"
     Copyright = r"\(c\)|®|©|™"
     ThreePlusRepeatingCharacters = r"([a-z])\1{2,}"
+    ApostropheWords = r"[\w]+['][\w]+(['][\w]+)?"

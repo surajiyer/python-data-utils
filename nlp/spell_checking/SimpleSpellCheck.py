@@ -7,7 +7,7 @@
     URL: https://norvig.com/spell-correct.html
 """
 
-from . import utils
+from .. import utils
 
 
 class SimpleSpellCheck:
