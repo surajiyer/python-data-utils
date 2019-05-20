@@ -89,7 +89,8 @@ class GibberishDetectorClassifier(BaseEstimator, ClassifierMixin):
         return np.array([self._avg_transition_prob(x) for x in X])
 
     def predict(self, X, threshold):
-        return (self.predict_proba(X) > threshold) * 1
+        # if the transition probability is lower than threshold, its gibberish, i.e., return 1 else 0
+        return (self.predict_proba(X) < threshold) * 1
 
 
 if __name__ == '__main__':
