@@ -10,8 +10,6 @@ from .trie import *
 from collections import Counter
 from os.path import dirname, join
 import numpy as np
-import distance
-from sklearn.cluster import AffinityPropagation
 import nltk
 import pandas as pd
 from .contractions import *
@@ -34,38 +32,6 @@ def create_dictionary_from_csv(file_path, header=False, delimiter=" "):
             f.readline()
         words = f.readlines()
     return set(line.split(delimiter)[0] for line in words)
-
-
-def create_trie_dictionary_from_csv(file_path, header=False, columns=[], delimiter=" ", callback=None):
-    model = Trie()
-    value = None
-
-    with open(file_path, 'r', encoding='utf8') as f:
-
-        # Handling headers in input file
-        if header == 'include':
-            columns = f.readline().replace('\n', '').split(delimiter)
-        elif header == 'ignore':
-            f.readline()
-        start_pos = f.tell()
-
-        # add all words to a Trie data structure
-        if columns:
-            model.addAll(((lambda x: {c: x[i] for i, c in enumerate(columns)})(
-                line.replace('\n', '').split(delimiter)) for line in f.readlines()))
-        else:
-            model.addAll((line.replace('\n', '').split(delimiter)
-                          [0].lower() for line in f.readlines()))
-
-        # call the callback function
-        if callback:
-            f.seek(start_pos)
-            value = callback(f)
-
-    if not callback:
-        return model
-    else:
-        return model, value
 
 
 def create_trie_dictionary(corpus=None, file_path=None):
@@ -198,9 +164,13 @@ def cluster_words_by_edit_distance2(words, verbose=True, **kwargs):
     assert isinstance(words, (list, tuple)) and any(isinstance(w, str)
                                                     for w in words), 'words must be an iterable of strings'
     assert isinstance(verbose, bool)
-    lev_similarity = -1 * \
-        np.array([[distance.levenshtein(w1, w2)
-                   for w1 in words] for w2 in words])
+
+    # Compute edit distance between words
+    import distance
+    lev_similarity = -1 * np.array([[distance.levenshtein(w1, w2) for w1 in words] for w2 in words])
+
+    # Compute word clusters with affinity propagation using edit distance similarity between words as input.
+    from sklearn.cluster import AffinityPropagation
     affprop = AffinityPropagation(affinity="precomputed", **kwargs)
     affprop.fit(lev_similarity)
     clusters = dict()
@@ -210,6 +180,35 @@ def cluster_words_by_edit_distance2(words, verbose=True, **kwargs):
             words[np.nonzero(affprop.labels_ == cluster_id)])
         if verbose:
             print(" - *%s:* %s" % (exemplar, ", ".join(clusters[exemplar])))
+    return clusters
+
+
+def documents_similarity_jaccard_affinity(documents, verbose=True, **kwargs):
+    """
+    Cluster text documents with affinity propogation based on jaccard similarity scores.
+
+    :param documents: list of tuples of type [(int, str),...]
+        Each tuple in list of documents is a pair of document id (int) and document text (str).
+    """
+    assert isinstance(verbose, bool)
+
+    # Computer jaccard similarity between documents
+    import distance
+    from ..numpy_utils import create_symmetric_matrix
+    documents = np.array([(idx, set(doc.split(" "))) for idx, doc in documents])
+    jaccard_similarity = [0 if idx1 == idx2 else -1 * distance.jaccard(doc1, doc2) for idx1, doc1 in documents for idx2, doc2 in documents if idx1 <= idx2]
+    jaccard_similarity = create_symmetric_matrix(jaccard_similarity)
+
+    # Create clusters with affinity propagation using jaccard similarity between documents as input.
+    from sklearn.cluster import AffinityPropagation
+    affprop = AffinityPropagation(affinity="precomputed", **kwargs)
+    affprop.fit(jaccard_similarity)
+    clusters = dict()
+    for cluster_id in np.unique(affprop.labels_):
+        exemplar = documents[affprop.cluster_centers_indices_[cluster_id]][0]
+        clusters[exemplar] = frozenset([idx for idx, _ in documents[np.nonzero(affprop.labels_ == cluster_id)]])
+        if verbose:
+            print(" - *%s:* %s" % (exemplar, ", ".join(str(idx) for idx in clusters[exemplar])))
     return clusters
 
 
