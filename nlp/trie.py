@@ -243,3 +243,35 @@ class Trie(MutableMapping):
 
     def __contains__(self, key):
         return self.find(key)[0]
+
+
+def create_trie_dictionary_from_csv(file_path, header=False, columns=[], delimiter=" ", callback=None):
+    model = Trie()
+    value = None
+
+    with open(file_path, 'r', encoding='utf8') as f:
+
+        # Handling headers in input file
+        if header == 'include':
+            columns = f.readline().replace('\n', '').split(delimiter)
+        elif header == 'ignore':
+            f.readline()
+        start_pos = f.tell()
+
+        # add all words to a Trie data structure
+        if columns:
+            model.addAll(((lambda x: {c: x[i] for i, c in enumerate(columns)})(
+                line.replace('\n', '').split(delimiter)) for line in f.readlines()))
+        else:
+            model.addAll((line.replace('\n', '').split(delimiter)
+                          [0].lower() for line in f.readlines()))
+
+        # call the callback function
+        if callback:
+            f.seek(start_pos)
+            value = callback(f)
+
+    if not callback:
+        return model
+    else:
+        return model, value
