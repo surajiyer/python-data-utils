@@ -256,54 +256,43 @@ def sum_of_squares_r2(results, labels, pos=1, neg=0):
 
 def logit_evaluation_summary(results, labels, pos=1, neg=0):
     return pd.DataFrame([
-        ('Pseudo R-squared', results.prsquared)
-        , ('Tjur R-squared', tjur_r2(results, labels, pos, neg))
-        , ('Squared Pearson Correlation R-squared', squared_pearson_correlation_r2(results, labels, pos, neg))
-        , ('Sum-of-squares R-squared', sum_of_squares_r2(results, labels, pos, neg))])
+        ('Pseudo R-squared', results.prsquared),
+        ('Tjur R-squared', tjur_r2(results, labels, pos, neg)),
+        ('Squared Pearson Correlation R-squared', squared_pearson_correlation_r2(results, labels, pos, neg)),
+        ('Sum-of-squares R-squared', sum_of_squares_r2(results, labels, pos, neg))])
 
 
-def logit_summary_params(results, alpha=0.05, alphas=np.array([0.1, 0.05, 0.01, 0.001]), margeff_kwargs={}):
-    assert all(isinstance(a, float) and 0. <= a <= 1. for a in alphas), 'ValueError: alphas.'
-    assert all(a > b for a, b in zip(alphas, alphas[1:])), 'alphas must be in strictly increasing order.'
+def summary_params(result, significance_levels=np.array([0.1, 0.05, 0.01, 0.001]), margeff_kwargs={}):
+    assert all(isinstance(a, float) and 0. <= a <= 1. for a in significance_levels), 'ValueError: significance levels must be in the range [0, 1].'
+    assert all(a > b for a, b in zip(significance_levels, significance_levels[1:])), 'significance_levels must be in strictly decreasing order.'
 
-    # # get confidenc intervals for coefficients
-    # conf_int = results.conf_int(alpha)
+    params = statsm.iolib.summary2.summary_params(result)
 
-    # # get index of columns where nunique == 1
-    # constant_cols_idx = np.argwhere(np.apply_along_axis(lambda x: np.unique(x).shape[0] == 1, 0, results.model.exog) == True).ravel()
+    # Logit model type
+    if isinstance(result, statsm.discrete.discrete_model.L1BinaryResultsWrapper):
+        params.insert(1, 'OddsRat.', np.exp(params['Coef.']))
+        params.insert(2, 'ME', result.get_margeff(**margeff_kwargs).summary_frame()['dy/dx'])
 
-    # # get and adjust marginal effects table by adding nans for columns with constant values
-    # margeff = np.insert(results.get_margeff(**margeff_kwargs).margeff, constant_cols_idx, np.nan)
+    params['Sign.'] = result.pvalues.apply(lambda x: '*' * np.sum(x < significance_levels))
 
-    # return pd.DataFrame(list(zip(results.params
-    #                       , np.exp(results.params)
-    #                       , results.bse
-    #                       , margeff
-    #                       , results.tvalues
-    #                       , results.pvalues
-    #                       , *conf_int.values.T
-    #                       , results.pvalues.apply(lambda x: '*'*np.sum(x < alphas))))
-    #              , columns=['Coef.', 'OddsRat.', 'Std.Err.', 'ME', 'z', 'P>|z|', '[{}'.format(alpha/2), '{}]'.format(1-(alpha/2)), 'Sign.']
-    #              , index=conf_int.index)
-    params = statsm.iolib.summary2.summary_params(results)
-    params.insert(1, 'OddsRat.', np.exp(params['Coef.']))
-    params.insert(2, 'ME', results.get_margeff(**margeff_kwargs).summary_frame()['dy/dx'])
-    params['Sign.'] = results.pvalues.apply(lambda x: '*' * np.sum(x < alphas))
-    # params = params.applymap(lambda x: "%.4f" % x)
     return params
 
 
-def logit_summary(results, labels=None, pos=1, neg=0, float_format='%.4f', summary_kwargs={}):
-    summary = results.summary2()
-    summary.tables.pop(1)
-    summary.add_df(logit_summary_params(results, **summary_kwargs), float_format=float_format)
-    if 'alphas' not in summary_kwargs:
+def summary(result, float_format='%.4f', summary_kwargs={}, evaluation_kwargs={}):
+    summary = result.summary2()
+    summary.tables.pop(1), summary.settings.pop(1)
+    summary.add_df(summary_params(result, **summary_kwargs), float_format=float_format)
+    if 'significance_levels' not in summary_kwargs:
         summary.add_text('Significance level: *: p < 0.1; **: p < 0.05; ***: p < 0.01; ****: p < 0.001')
     else:
-        summary.add_text('Significance level: ' + ' '.join(['*' * (i + 1) + ': p < {};'.format(a) for i, a in enumerate(summary_kwargs.alphas)]))
-    if labels is not None:
-        summary.add_df(logit_evaluation_summary(results, labels, pos, neg),
-            header=False, index=False, float_format=float_format)
+        summary.add_text(
+            'Significance level: ' + ' '.join(['*' * (i + 1) + ': p < {};'.format(a) for i, a in enumerate(summary_kwargs.alphas)]))
+    if 'labels' in evaluation_kwargs:
+        # Logit model type
+        if isinstance(result, statsm.discrete.discrete_model.L1BinaryResultsWrapper):
+            summary.add_df(
+                logit_evaluation_summary(result, **evaluation_kwargs),
+                header=False, index=False, float_format=float_format)
     return summary
 
 
