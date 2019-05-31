@@ -17,11 +17,6 @@ from statsmodels.graphics.gofplots import ProbPlot
 import re
 
 plt.style.use('seaborn')  # pretty matplotlib plots
-# plt.rc('font', size=14)
-# plt.rc('figure', titlesize=18)
-# plt.rc('axes', labelsize=15)
-# plt.rc('axes', titlesize=18)
-# plt.rc('figure', autolayout=True)
 
 
 def residual_plot(y, results):
@@ -145,7 +140,8 @@ def leverage_plot(results):
     fig.set_figwidth(12)
 
     plt.scatter(model_leverage, model_norm_residuals, alpha=0.5)
-    sns.regplot(model_leverage, model_norm_residuals,
+    sns.regplot(
+        model_leverage, model_norm_residuals,
         scatter=False,
         ci=False,
         lowess=True,
@@ -206,7 +202,7 @@ def tjur_r2(results, labels, pos=1, neg=0):
 
 def squared_pearson_correlation_r2(results, labels, pos=1, neg=0):
     """
-    Citation: MITTLBÖCK, M. and SCHEMPER, M. (1996), EXPLAINED VARIATION FOR LOGISTIC REGRESSION. Statist. Med., 15: 1987-1997. 
+    Citation: MITTLBÖCK, M. and SCHEMPER, M. (1996), EXPLAINED VARIATION FOR LOGISTIC REGRESSION. Statist. Med., 15: 1987-1997.
     doi:10.1002/(SICI)1097-0258(19961015)15:19<1987::AID-SIM318>3.0.CO;2-9.
     https://pdfs.semanticscholar.org/39f1/82f6733f1b37c42539703c80e920f862ee6c.pdf
     """
@@ -233,7 +229,7 @@ def squared_pearson_correlation_r2(results, labels, pos=1, neg=0):
 
 def sum_of_squares_r2(results, labels, pos=1, neg=0):
     """
-    Citation: MITTLBÖCK, M. and SCHEMPER, M. (1996), EXPLAINED VARIATION FOR LOGISTIC REGRESSION. Statist. Med., 15: 1987-1997. 
+    Citation: MITTLBÖCK, M. and SCHEMPER, M. (1996), EXPLAINED VARIATION FOR LOGISTIC REGRESSION. Statist. Med., 15: 1987-1997.
     doi:10.1002/(SICI)1097-0258(19961015)15:19<1987::AID-SIM318>3.0.CO;2-9.
     https://pdfs.semanticscholar.org/39f1/82f6733f1b37c42539703c80e920f862ee6c.pdf
     """
@@ -392,33 +388,33 @@ def summary_to_latex(results):
     caption = re.search(r'(\\caption.+)\n', stuff).group(0)
     replacements = [
         # Remove the table environment
-        (r'\\begin{table}\n', '')
-        , (r'\\end{table}\n', '')
-        , (r'\\caption.+\n', '')
+        (r'\\begin{table}\n', ''),
+        (r'\\end{table}\n', ''),
+        (r'\\caption.+\n', ''),
         # Replace it with separate environment for each tabular
-        , (r'(\\begin{center})', r'\\begin{{table}}\n{}\1'.format(caption))
-        , (r'(\\end{center})', r'\1\n\\end{table}')
+        (r'(\\begin{center})', r'\\begin{{table}}\n{}\1'.format(caption)),
+        (r'(\\end{center})', r'\1\n\\end{table}'),
         # Remove the bizzare placement of \hline between tables
-        , (r'\\end{table}\n\\hline\n\\begin{table}', r'\\end{table}\n\\begin{table}')
+        (r'\\end{table}\n\\hline\n\\begin{table}', r'\\end{table}\n\\begin{table}'),
         # Convert summary results table to longtable
-        , (r'\\begin{tabular}({\w+}\n\\hline\n\s+&\s+Coef.)', r'\\begin{longtable}\1')
-        , (r'(?s)(\\begin{longtable}.*?)(?=\\end{table})', r'\1\\end{longtable}')
-        , (r'(\\end{longtable})\\end{table}', r'\1')
-        , (r'(?s)(\\end{table}\n\\begin{table}.*?)(?=\\begin{longtable})', r'')
-        , (r'(?s)\\end{tabular}(((?!\\end{tabular}).)*)(?=\\end{longtable})', r'')
-        , (r'(\\begin{longtable}{\w+})', r'\1\n{}'.format(caption))
-         # Add a resizebox to fit table to page margins
-    #     , (r'\\begin{tabular}', r'\\resizebox{\\textwidth}{!}{%\n\\begin{tabular}')
-    #     , (r'\\end{tabular}', r'\\end{tabular}}')
-    #     # Merge the table headers and model summary results into a single table
-        , (r'\\end{tabular}\n\\begin{tabular}{\w+}\n(\w+)', r'\1')
-    # #     , (r'lccccccccc', r'lrrrrrrrrr')
-    #     # Using p{8cm} instead of l adds text wrapping for long variable names
-        , (r'(\\begin{longtable}){l(\w+)}', r'\1{p{8cm}\2}')
-    #     # Make double \hlines into single
-        , (r'\\hline\n\\hline', r'\\hline')
-        , (r'\\hline(\nIntercept)', r'\\hline\n\\endhead\n\\hline\n\\multicolumn{10}{r}{\\textit{Continued on next page}} \\\\\\endfoot\n\\hline\n\\endlastfoot\1')
-        , (r'\\end{table}\n\\end{table}', r'\\end{table}')
+        (r'\\begin{tabular}({\w+}\n\\hline\n\s+&\s+Coef.)', r'\\begin{longtable}\1'),
+        (r'(?s)(\\begin{longtable}.*?)(?=\\end{table})', r'\1\\end{longtable}'),
+        (r'(\\end{longtable})\\end{table}', r'\1'),
+        (r'(?s)(\\end{table}\n\\begin{table}.*?)(?=\\begin{longtable})', r''),
+        (r'(?s)\\end{tabular}(((?!\\end{tabular}).)*)(?=\\end{longtable})', r''),
+        (r'(\\begin{longtable}{\w+})', r'\1\n{}'.format(caption)),
+        # Add a resizebox to fit table to page margins
+        #     (r'\\begin{tabular}', r'\\resizebox{\\textwidth}{!}{%\n\\begin{tabular}'),
+        #     (r'\\end{tabular}', r'\\end{tabular}}'),
+        # Merge the table headers and model summary results into a single table
+        (r'\\end{tabular}\n\\begin{tabular}{\w+}\n(\w+)', r'\1'),
+        #     (r'lccccccccc', r'lrrrrrrrrr'),
+        # Using p{8cm} instead of l adds text wrapping for long variable names
+        (r'(\\begin{longtable}){l(\w+)}', r'\1{p{8cm}\2}'),
+        # Make double \hlines into single
+        (r'\\hline\n\\hline', r'\\hline'),
+        (r'\\hline(\nIntercept)', r'\\hline\n\\endhead\n\\hline\n\\multicolumn{10}{r}{\\textit{Continued on next page}} \\\\\\endfoot\n\\hline\n\\endlastfoot\1'),
+        (r'\\end{table}\n\\end{table}', r'\\end{table}'),
     ]
 
     for old, new in replacements:
