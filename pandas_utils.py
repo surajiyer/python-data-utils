@@ -562,7 +562,7 @@ def nullity_correlation(df, corr_method='spearman', jupyter_nb=False, fill_na=-1
     df_ = df.copy()
 
     # add missingness indicator variables
-    df_ = add_NA_indicator_variables(df, copy=False)
+    df_ = add_NA_indicator_variables(df_, copy=False)
 
     # check correlation between each variable and indicator
     corr = df_.fillna(fill_na).corr(method=corr_method)
@@ -712,3 +712,18 @@ def insert_column(df, column_name, column, after_column=None, before_column=None
 def get_current_datetime_str():
     import time
     return time.strftime("%Y%m%d-%H%M%S")
+
+
+def feature_select_correlation(df, threshold=.5, verbose=False):
+    cols = df.columns.tolist()
+    index = 0
+    while len(cols) > index:
+        corr = jupyter_plot_interactive_correlation_to_label_col(df[cols], cols[index])[0].spearman
+        corr = corr[corr.apply(lambda x: abs(x) > threshold)].index.difference([cols[index]])
+        if len(corr) > 0:
+            if verbose:
+                print(cols[index], ':', corr)
+            for c in corr:
+                cols.remove(c)
+        index += 1
+    return df[cols]
