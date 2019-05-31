@@ -53,3 +53,9 @@ def create_symmetric_matrix(values):
     Create a symmetric matrix with given input array.
     """
     return symmetrize(create_upper_matrix(values))
+
+
+def pairwise_difference(values):
+    """
+    """
+    return values - values[:, None]
