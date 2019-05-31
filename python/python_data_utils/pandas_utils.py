@@ -47,7 +47,7 @@ def df_mem_usage(df):
 def optimize_dataframe(df, categorical=[], always_positive_ints=[], cat_nunique_ratio=.5, verbose=False):
     """
     Optimize the memory usage of the given dataframe by modifying data types.
-    :param df: pandas DataFrame
+    :param df: pd.DataFrame
     :param categorical: list of (str, bool) pairs, optional (default=[])
         List of categorical variables with boolean representing if they are ordered or not.
     :param always_positive_ints: list of str, optional (default=[])
@@ -56,7 +56,7 @@ def optimize_dataframe(df, categorical=[], always_positive_ints=[], cat_nunique_
         Ratio of unique values to total values. Used for detecting cateogrical columns.
     :param verbose: bool, optional (default=False)
         Print before and after memory usage
-    :return df: pandas DataFrame
+    :return df: pd.DataFrame
     """
     cat = [] if len(categorical) == 0 else list(zip(*categorical))[0]
 
@@ -121,8 +121,8 @@ def tsv_to_pandas_generator(file_path, target_label=None, chunksize=None):
     :param chunksize: int
         function yields dataframes in chunks as a generator function
     :return:
-        X: pandas.DataFrame
-        y: pandas.Series
+        X: pd.DataFrame
+        y: pd.Series
             included if target label is given
     """
     assert isinstance(file_path, six.string_types) and len(file_path) > 0
@@ -267,13 +267,13 @@ def tsv_to_pandas(file_path, target_label=None, memory_optimize=True, categorica
     return (X, y) if target_label else X
 
 
-def pandas_to_tsv(save_file_path, df, index=False, mode='w', header=True):
+def pandas_to_tsv(df, save_file_path, index=False, mode='w', header=True):
     """
     Save pre-processed DataFrame as tsv file.
+    :param df: pd.DataFrame
+        DataFrame to save as tsv
     :param save_file_path: str
         File save path. Path must exist, if not, a path will be created automatically.
-    :param df: pandas.DataFrame
-        DataFrame to save as tsv
     :param index: bool
         write the row names to output.
     :param mode: str
@@ -305,13 +305,13 @@ def list_column_to_mutliple_columns(s):
     """
     Expands a single column containing variable-length lists to multiple binary columns.
     :param s: List column pandas series
-    :return df: Pandas dataframe with multiple columns, one per unique item in all lists.
+    :return df: pd.DataFrame with multiple columns, one per unique item in all lists.
     """
     return pd.get_dummies(s.apply(pd.Series).stack()).sum(level=0)
 
 
-def get_missingness(df): return [(c, df[c].isna().sum())
-                                 for c in df if df[c].isna().any()]
+def get_missingness(df):
+    return [(c, df[c].isna().sum()) for c in df if df[c].isna().any()]
 
 
 def get_missingness_perc(df):
@@ -327,47 +327,55 @@ def get_missingness_perc(df):
     return missingness
 
 
-def jupyter_plot_interactive_correlation_to_label_col(df, label_col):
+def correlations_to_column(df, col, jupyter_nb=False):
     """
-    Plot (interactive  jupyter NB) correlation vector of label column to all other columns.
-    Correlation value obtained using spearman rank test.
+    Get correlation of all columns to given column :col:.
+    If :jupyter_nb: is true, get interactive widget slider to filter columns by spearman correlation strength.
 
-    :param df: Pandas dataframe
+    :param df: pd.DataFrame
     :label_col: Label column for which we find correlation to all other columns.
-    :return corr:
+    :return corr: pd.DataFrame
         Dataframe containing 2 columns: one for correlation values obtained
         using Pearson Rho test and one with Spearman Rank test.
-    :return corr_slider: Jupyter widgets.FloatSlider ranging from 0.0 to 1.0 to control interactive view.
+    :return corr_slider: widgets.FloatSlider
+        If :jupyter_nb: is true, Jupyter  ranging from 0.0 to 1.0
+        over spearman correlation strength to filter columns interactively.
     """
     # Get Pearson correlation - to describe extent of linear correlation with label
-    pearson = df.corr(method="pearson")[label_col].rename("pearson")
+    pearson = df.corr(method="pearson")[col].rename("pearson")
 
     # Get Spearman rank correlation - to describe extent of any monotonic relationship with label
-    spearman = df.corr(method="spearman")[label_col].rename("spearman")
+    spearman = df.corr(method="spearman")[col].rename("spearman")
 
     corr = pd.concat([pearson, spearman], axis=1)
 
-    def view_correlations(corr_strength=0.0):
-        if corr_strength == 0.0:
-            x = corr
-        else:
-            x = corr.where((abs(corr.spearman) > corr_strength)
-                           & (corr.spearman != 1)).dropna()
-        print('N: {}'.format(x.shape[0]))
-        display(x)
-        return x
+    if jupyter_nb:
+        from IPython.display import display
+        import ipywidgets as widgets
+        from ipywidgets import interactive
 
-    corr_slider = widgets.FloatSlider(value=0.0, min=0.0, max=1.0, step=0.0001)
-    w = interactive(view_correlations, corr_strength=corr_slider)
+        def view_correlations(corr_strength=0.0):
+            if corr_strength == 0.0:
+                x = corr
+            else:
+                x = corr.where((abs(corr.spearman) > corr_strength) & (corr.spearman != 1)).dropna()
+            print('N: {}'.format(x.shape[0]))
+            display(x)
+            return x
 
-    return corr, corr_slider, w
+        corr_slider = widgets.FloatSlider(value=0.0, min=0.0, max=1.0, step=0.0001)
+        w = interactive(view_correlations, corr_strength=corr_slider)
+
+        return corr, w
+
+    return corr
 
 
 def feature_corr_matrix(df, size=10, method="spearman"):
     """Function plots a graphical correlation matrix for each pair of columns in the dataframe.
 
     Input:
-        df: pandas DataFrame
+        df: pd.DataFrame
         size: vertical and horizontal size of the plot
         method: correlation test method
     """
@@ -464,7 +472,7 @@ def feature_class_relationship(df, by, figsize=(20, 20), ncols=4):
     """
     Plot histograms for every variable in :param df: grouped by :param by:.
 
-    :param df: Pandas DataFrame
+    :param df: pd.DataFrame
     :param by: See documentation on Pandas.groupBy(by=...).
     :param figsize: See documentation on matplotlib.figure(figsize=...).
     :param ncols: Number of histogram plots in one row. One plot per variable.
@@ -725,7 +733,7 @@ def feature_select_correlation(df, threshold=.5, verbose=False):
     cols = df.columns.tolist()
     index = 0
     while len(cols) > index:
-        corr = jupyter_plot_interactive_correlation_to_label_col(df[cols], cols[index])[0].spearman
+        corr = correlations_to_column(df[cols], cols[index]).spearman
         corr = corr[corr.apply(lambda x: abs(x) > threshold)].index.difference([cols[index]])
         if len(corr) > 0:
             if verbose:
