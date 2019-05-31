@@ -404,7 +404,7 @@ class RegexPattern:
     TimeOfDay = r"([0[0-9]|1[0-9]|2[0-3]):[0-5][0-9](\s?a[.]?m[.]?|p[.]?m[.]?|A[.]?M[.]?|P[.]?M[.]?)?"
     Unicode = r"[^\x00-\x7F]"
     Quotes = lambda x: r"(\"{0}\"|\'{0}\')".format(x)
-    URL = r'(https?:\/\/(www\.)?)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}\b([-a-zA-Z0-9@:%_\+.~#?&\/\/=]*)'
+    URL = r'(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?'
     SpecialCharacters = r'[`!@#*-+{}\[\]:;\'"|\\,<>\/]'
     NumbersWithSuffix = r'[0-9]+(st|th|nd|rd)'
     VersionNumber3N = r"\b(\d+\.)?(\d+\.)?(\*|\d+)\b"
