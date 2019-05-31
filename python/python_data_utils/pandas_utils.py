@@ -556,11 +556,11 @@ def drop_duplicates(df, columns):
     return df.drop('check_string', axis=1)
 
 
-def add_NA_indicator_variables(df, copy=True):
+def add_NA_indicator_variables(df, inplace=False):
     """
     Add indicator variables for each column to indicate missingness.
     """
-    df_ = df.copy() if copy else df
+    df_ = df if inplace else df.copy()
     for i, c in enumerate(df_.columns):
         x = df_[c].isna()
         if x.any():
@@ -572,7 +572,7 @@ def nullity_correlation(df, corr_method='spearman', jupyter_nb=False, fill_na=-1
     df_ = df.copy()
 
     # add missingness indicator variables
-    df_ = add_NA_indicator_variables(df_, copy=False)
+    df_ = add_NA_indicator_variables(df_, inplace=True)
 
     # check correlation between each variable and indicator
     corr = df_.fillna(fill_na).corr(method=corr_method)
@@ -696,13 +696,12 @@ def df_value_counts(df, normalize=False, delimiter=';'):
     return df
 
 
-def reorder_columns(df, src_idx, dest_idx, copy=True):
-    if copy:
-        df = df.copy()
-    c = df.iloc[:, src_idx]
-    df.drop(c.name, axis=1, inplace=True)
-    df.insert(dest_idx, c.name, c)
-    return df
+def reorder_columns(df, src_idx, dest_idx, inplace=False):
+    df_ = df if inplace else df.copy()
+    c = df_.iloc[:, src_idx]
+    df_.drop(c.name, axis=1, inplace=True)
+    df_.insert(dest_idx, c.name, c)
+    return df_
 
 
 def get_age_from_dob(s, round=True):
