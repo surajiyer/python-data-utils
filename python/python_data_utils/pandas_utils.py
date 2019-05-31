@@ -10,20 +10,7 @@ from __future__ import print_function
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
-from IPython.display import display
-import ipywidgets as widgets
-from ipywidgets import interactive
 import six
-import time
-import dill
-import shutil
-import os
-import errno
-from sklearn.utils import resample
-from progressbar.bar import ProgressBar
-from pandas.plotting import scatter_matrix
-from statsmodels.graphics.factorplots import interaction_plot
 # from imblearn.over_sampling import smote
 
 plt.style.use('seaborn')  # pretty matplotlib plots
@@ -170,14 +157,17 @@ def tsv_to_pandas(file_path, target_label=None, memory_optimize=True, categorica
         Save the final result as a pickle object. Save path can be given as a string.
         Otherwise, saved in the same directory as the input file path.
     :return:
-        X: pandas.DataFrame
-        y: pandas.Series
+        X: pd.DataFrame
+        y: pd.Series
             included if target label is given
     """
     assert isinstance(file_path, six.string_types) and len(file_path) > 0
     assert target_label is None or isinstance(target_label, six.string_types)
+    import dill
+    import os
 
     if verbose:
+        import time
         start_time = time.time()
 
     # Get number of rows in data
@@ -186,6 +176,7 @@ def tsv_to_pandas(file_path, target_label=None, memory_optimize=True, categorica
 
     # Initialize progress bar
     chunksize = 100000
+    from progressbar.bar import ProgressBar
     progress = ProgressBar(max_value=int(filesize / chunksize)).start()
 
     data = tsv_to_pandas_generator(
@@ -197,6 +188,7 @@ def tsv_to_pandas(file_path, target_label=None, memory_optimize=True, categorica
         results_dir = os.path.splitext(file_path)[0]
 
         # delete directory if it already exists
+        import shutil
         shutil.rmtree(results_dir, ignore_errors=True)
 
         # make the results directory
@@ -204,6 +196,7 @@ def tsv_to_pandas(file_path, target_label=None, memory_optimize=True, categorica
             try:
                 os.makedirs(results_dir)
             except OSError as e:
+                import errno
                 if e.errno != errno.EEXIST:
                     raise
 
@@ -254,6 +247,7 @@ def tsv_to_pandas(file_path, target_label=None, memory_optimize=True, categorica
                 try:
                     os.makedirs(save_path)
                 except OSError as e:
+                    import errno
                     if e.errno != errno.EEXIST:
                         raise
         else:
@@ -295,8 +289,10 @@ def pandas_to_tsv(save_file_path, df, index=False, mode='w', header=True):
 
     # make a new directory to save the file
     try:
+        import os
         os.makedirs(os.path.split(save_file_path)[0])
     except OSError as e:
+        import errno
         if e.errno != errno.EEXIST:
             raise
 
@@ -408,6 +404,7 @@ def feature_corr_matrix_sns(df, method="spearman", upsidedown=False):
     f, ax = plt.subplots(figsize=(11, 9))
 
     # Generate a custom diverging colormap
+    import seaborn as sns
     cmap = sns.diverging_palette(220, 10, as_cmap=True)
 
     # Draw the heatmap with the mask and correct aspect ratio
@@ -437,17 +434,21 @@ def balanced_sampling(df_minority, df_majority, minority_upsampling_ratio=0.2, o
                       use_smote_upsampling=False):
     # Upsample minority class by minority_upsampling_ratio%
     new_size = int(df_minority.shape[0] * (1 + minority_upsampling_ratio))
+
     # upsample the minority class to the new size
+    from sklearn.utils import resample
     if use_smote_upsampling:
         pass  # smote.SMOTE(kind='borderline1').fit_sample()
     else:
         df_minority = resample(df_minority, replace=True,
                                n_samples=new_size, random_state=0)
+
     if not only_upsample:
         # downsample the majority class to the new size
         df_majority = resample(df_majority, replace=False,
                                n_samples=new_size, random_state=0)
     df = pd.concat([df_minority, df_majority])
+
     return df
 
 
@@ -476,7 +477,6 @@ def feature_class_relationship(df, by, figsize=(20, 20), ncols=4):
         ax = f.add_subplot(nrows, ncols, i + 1)
         for k, v in grps:
             ax.hist(v[c], label=k, bins=25, alpha=0.4)
-#         grps[c].hist(bins=25, alpha=0.4, ax=ax)
         ax.set_title(c)
         ax.legend(loc='upper right')
     f.tight_layout(pad=0.4, w_pad=0.5, h_pad=1.0)
@@ -485,6 +485,7 @@ def feature_class_relationship(df, by, figsize=(20, 20), ncols=4):
 
 
 def feature_feature_relationship(df, figsize=(20, 20)):
+    from pandas.plotting import scatter_matrix
     sm = scatter_matrix(df + 0.00001 * np.random.rand(*df.shape),
                         alpha=0.2, figsize=figsize, diagonal='kde')
 
@@ -526,6 +527,7 @@ def feature_feature_relationship_one(df, cols, by=lambda x: True):
 
 
 def categorical_interaction_plot(df, col1, col2, by, figsize=(6, 6), **plot_kwargs):
+    from statsmodels.graphics.factorplots import interaction_plot
     return interaction_plot(x=df[col1], trace=by, response=df[col2],
                             colors=['red', 'blue'], markers=['D', '^'], ms=10, **plot_kwargs)
 
@@ -534,11 +536,11 @@ def drop_duplicates(df, columns):
     '''
     Drop duplicate rows based on unique values from combination of given columns.
 
-    :param df: dataframe
+    :param df: pd.DataFrame
     :param columns: list of str
         Keeps unique combinations of values across given columns and drops remaining.
         Note that output will still include all other columns.
-    :return df: dataframe with duplicates acros all :columns: dropped.
+    :return df: pd.DataFrame with duplicates across all :columns: dropped.
     '''
     df['check_string'] = df.apply(lambda row: ''.join(
         sorted([row[c] for c in columns])), axis=1)
@@ -584,6 +586,10 @@ def nullity_correlation(df, corr_method='spearman', jupyter_nb=False, fill_na=-1
     corr = drop_duplicates(corr, ['col1', 'col2']).reset_index(drop=True)
 
     if jupyter_nb:
+        from IPython.display import display
+        import ipywidgets as widgets
+        from ipywidgets import interactive
+
         def filter(corr_strength=0.0, var_name=""):
             var_name = var_name.lower()
             x = corr
@@ -608,6 +614,7 @@ def nullity_correlation(df, corr_method='spearman', jupyter_nb=False, fill_na=-1
 
 
 def missingness_heatmap(df):
+    import seaborn as sns
     return sns.heatmap(df.isnull(), cbar=False)
 
 
