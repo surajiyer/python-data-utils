@@ -59,3 +59,17 @@ def pairwise_difference(values):
     """
     """
     return values - values[:, None]
+
+
+def is_pos_def(values):
+    """
+    Is matrix :values: positive definite?
+    """
+    if np.allclose(values, values.T):
+        try:
+            np.linalg.cholesky(values)
+            return True
+        except np.linalg.LinAlgError:
+            return False
+    else:
+        return False
