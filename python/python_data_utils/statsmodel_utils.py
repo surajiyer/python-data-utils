@@ -19,7 +19,7 @@ import re
 plt.style.use('seaborn')  # pretty matplotlib plots
 
 
-def residual_plot(y, results):
+def residual_plot(results, y, n_annotate=3):
     # fitted values (need a constant term for intercept)
     model_fitted_y = results.fittedvalues
 
@@ -34,7 +34,7 @@ def residual_plot(y, results):
     # absolute residuals
     model_abs_resid = np.abs(residuals)
 
-    fig = plt.figure(1)
+    fig = plt.figure()
     fig.set_figheight(8)
     fig.set_figwidth(12)
 
@@ -49,16 +49,17 @@ def residual_plot(y, results):
 
     # annotations
     abs_resid = pd.Series(model_abs_resid[::-1]).sort_values(ascending=False)
-    abs_resid_top_3 = abs_resid[:3]
+    n_annotate = min(n_annotate, len(abs_resid))
+    abs_resid_top_n = abs_resid[:n_annotate]
 
-    for i in abs_resid_top_3.index:
+    for i in abs_resid_top_n.index:
         fig.axes[0].annotate(i, xy=(model_fitted_y[i], residuals[i]))
 
     plt.close()
     return fig
 
 
-def qq_plot(results):
+def qq_plot(results, n_annotate=3):
     # normalized residuals
     model_norm_residuals = results.get_influence().resid_studentized_internal
 
@@ -74,16 +75,17 @@ def qq_plot(results):
 
     # annotations
     abs_norm_resid = np.flip(np.argsort(np.abs(model_norm_residuals)), 0)
-    abs_norm_resid_top_3 = abs_norm_resid[:3]
+    n_annotate = min(n_annotate, len(abs_norm_resid))
+    abs_norm_resid_top_n = abs_norm_resid[:n_annotate]
 
-    for r, i in enumerate(abs_norm_resid_top_3):
+    for r, i in enumerate(abs_norm_resid_top_n):
         fig.axes[0].annotate(i, xy=(np.flip(QQ.theoretical_quantiles, 0)[r], model_norm_residuals[i]))
 
     plt.close()
     return fig
 
 
-def scale_location_plot(df, results):
+def scale_location_plot(results, n_annotate=3):
     # fitted values (need a constant term for intercept)
     model_fitted_y = results.fittedvalues
 
@@ -93,7 +95,7 @@ def scale_location_plot(df, results):
     # absolute squared normalized residuals
     model_norm_residuals_abs_sqrt = np.sqrt(np.abs(model_norm_residuals))
 
-    fig = plt.figure(3)
+    fig = plt.figure()
     fig.set_figheight(8)
     fig.set_figwidth(12)
 
@@ -110,16 +112,17 @@ def scale_location_plot(df, results):
 
     # annotations
     abs_sq_norm_resid = np.flip(np.argsort(model_norm_residuals_abs_sqrt), 0)
-    abs_sq_norm_resid_top_3 = abs_sq_norm_resid[:3]
+    n_annotate = min(n_annotate, len(abs_sq_norm_resid))
+    abs_sq_norm_resid_top_n = abs_sq_norm_resid[:n_annotate]
 
-    for i in abs_sq_norm_resid_top_3:
+    for i in abs_sq_norm_resid_top_n:
         fig.axes[0].annotate(i, xy=(model_fitted_y[i], model_norm_residuals_abs_sqrt[i]))
 
     plt.close()
     return fig
 
 
-def leverage_plot(results):
+def leverage_plot(results, n_annotate=3):
     """
     This plot shows if any outliers have influence over the regression fit.
     Anything outside the group and outside “Cook’s Distance” lines, may have an influential effect on model fit.
@@ -135,7 +138,7 @@ def leverage_plot(results):
     # cook's distance, from statsmodels internals
     model_cooks = results.get_influence().cooks_distance[0]
 
-    fig = plt.figure(4)
+    fig = plt.figure()
     fig.set_figheight(8)
     fig.set_figwidth(12)
 
@@ -154,7 +157,9 @@ def leverage_plot(results):
     fig.axes[0].set_ylabel('Standardized Residuals')
 
     # annotations
-    leverage_top_3 = np.flip(np.argsort(model_cooks), 0)[:3]
+    cooks_distance = np.flip(np.argsort(model_cooks), 0)
+    n_annotate = min(n_annotate, len(cooks_distance))
+    leverage_top_3 = cooks_distance[:n_annotate]
 
     for i in leverage_top_3:
         fig.axes[0].annotate(i, xy=(model_leverage[i], model_norm_residuals[i]))
@@ -163,7 +168,7 @@ def leverage_plot(results):
     def graph(formula, x_range, label=None):
         x = x_range
         y = formula(x)
-        plt.plot(x, y, label=label, lw=1, ls='--', color='red')
+        fig.axes[0].plot(x, y, label=label, lw=1, ls='--', color='red')
 
     p = len(results.params)  # number of model parameters
 
@@ -172,7 +177,7 @@ def leverage_plot(results):
           'Cook\'s distance')  # 0.5 line
     graph(lambda x: np.sqrt((1 * p * (1 - x)) / x),
           np.linspace(0.001, 0.200, 50))  # 1 line
-    plt.legend(loc='upper right')
+    fig.axes[0].legend(loc='upper right')
 
     plt.close()
     return fig
