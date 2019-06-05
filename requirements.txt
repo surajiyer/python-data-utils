@@ -17,7 +17,6 @@ distance # For various distance functions
 dill==0.2.8.2
 tqdm
 progressbar2==3.37.1
-Cython
 
 # Network-Analysis
 graphviz
@@ -51,3 +50,7 @@ unidecode
 symspellpy
 fuzzywuzzy
 beautifulsoup4
+
+# Advanced-Scientific-Computing
+Cython
+numba  # Automatic translation of python functions to JIT compiler executable machine code for performance
