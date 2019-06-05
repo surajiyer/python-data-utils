@@ -155,6 +155,22 @@ def cluster_words_by_edit_distance1(words, dist=2):
     return cluster
 
 
+def documents_clustering_affinity_propagation(documents, similarity_matrix, verbose=True, **kwargs):
+    """
+    Create clusters with affinity propagation using given similarity matrix between documents as input.
+    """
+    from sklearn.cluster import AffinityPropagation
+    affprop = AffinityPropagation(affinity="precomputed", **kwargs)
+    affprop.fit(similarity_matrix)
+    clusters = dict()
+    for cluster_id in np.unique(affprop.labels_):
+        exemplar = documents[affprop.cluster_centers_indices_[cluster_id]][0]
+        clusters[exemplar] = frozenset([idx for idx, _ in documents[np.nonzero(affprop.labels_ == cluster_id)]])
+        if verbose:
+            print(" - *%s:* %s" % (exemplar, ", ".join(str(idx) for idx in clusters[exemplar])))
+    return clusters
+
+
 def cluster_words_by_edit_distance2(words, verbose=True, **kwargs):
     """
     Paper:
@@ -170,17 +186,7 @@ def cluster_words_by_edit_distance2(words, verbose=True, **kwargs):
     lev_similarity = -1 * np.array([[distance.levenshtein(w1, w2) for w1 in words] for w2 in words])
 
     # Compute word clusters with affinity propagation using edit distance similarity between words as input.
-    from sklearn.cluster import AffinityPropagation
-    affprop = AffinityPropagation(affinity="precomputed", **kwargs)
-    affprop.fit(lev_similarity)
-    clusters = dict()
-    for cluster_id in np.unique(affprop.labels_):
-        exemplar = words[affprop.cluster_centers_indices_[cluster_id]]
-        clusters[exemplar] = np.unique(
-            words[np.nonzero(affprop.labels_ == cluster_id)])
-        if verbose:
-            print(" - *%s:* %s" % (exemplar, ", ".join(clusters[exemplar])))
-    return clusters
+    return documents_clustering_affinity_propagation(words, lev_similarity, verbose, **kwargs)
 
 
 def documents_similarity_jaccard_affinity(documents, verbose=True, **kwargs):
@@ -200,16 +206,7 @@ def documents_similarity_jaccard_affinity(documents, verbose=True, **kwargs):
     jaccard_similarity = create_symmetric_matrix(jaccard_similarity)
 
     # Create clusters with affinity propagation using jaccard similarity between documents as input.
-    from sklearn.cluster import AffinityPropagation
-    affprop = AffinityPropagation(affinity="precomputed", **kwargs)
-    affprop.fit(jaccard_similarity)
-    clusters = dict()
-    for cluster_id in np.unique(affprop.labels_):
-        exemplar = documents[affprop.cluster_centers_indices_[cluster_id]][0]
-        clusters[exemplar] = frozenset([idx for idx, _ in documents[np.nonzero(affprop.labels_ == cluster_id)]])
-        if verbose:
-            print(" - *%s:* %s" % (exemplar, ", ".join(str(idx) for idx in clusters[exemplar])))
-    return clusters
+    return documents_clustering_affinity_propagation(documents, jaccard_similarity, verbose, **kwargs)
 
 
 def count_words(sentence, delimiter=' '):
