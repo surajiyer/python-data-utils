@@ -728,16 +728,45 @@ def get_current_datetime_str():
     return time.strftime("%Y%m%d-%H%M%S")
 
 
-def feature_select_correlation(df, threshold=.5, verbose=False):
+def feature_select_correlation(df, threshold=.5):
     cols = df.columns.tolist()
     index = 0
+    x = []
     while len(cols) > index:
         corr = correlations_to_column(df[cols], cols[index]).spearman
-        corr = corr[corr.apply(lambda x: abs(x) > threshold)].index.difference([cols[index]])
+        corr = corr[(corr.apply(lambda x: abs(x) > threshold)) & (corr.index != cols[index])]
         if len(corr) > 0:
-            if verbose:
-                print(cols[index], ':', corr)
-            for c in corr:
+            x.append(pd.DataFrame({
+                'selected': [cols[index]] * len(corr),
+                'correlated': corr.index,
+                'corr_strength': corr.values
+            }))
+            for c in corr.index:
                 cols.remove(c)
         index += 1
-    return df[cols]
+    return df[cols], pd.concat(x)
+
+
+def mahalanobis_distance(df):
+    cov_matrix = np.cov(df)
+    from python_data_utils import numpy_utils as npu
+    if npu.is_pos_def(cov_matrix):
+        inv_cov_matrix = np.linalg.inv(cov_matrix)
+        if npu.is_pos_def(inv_cov_matrix):
+            means = df.mean(axis=0)
+            df = df.apply(lambda row: row - means, axis=1)
+            df = df.apply(lambda row: np.sqrt(row @ inv_cov_matrix @ row), axis=1)
+            return df
+        else:
+            raise ValueError("Covariance Matrix is not positive definite!")
+    else:
+        raise ValueError("Covariance Matrix is not positive definite!")
+
+
+def outlier_detection_mahalanobis(df, threshold=2):
+    md = mahalanobis_distance(df)
+    std = np.std(md)
+    m = np.mean(md)
+    k = threshold * std
+    up, lo = m + k, m - k
+    return np.argwhere(np.logical_or(md >= up, md <= lo))[:, 0]
