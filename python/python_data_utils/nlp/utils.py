@@ -6,13 +6,13 @@
 """
 
 import re
-from .trie import *
+from python_data_utils.nlp.trie import *
 from collections import Counter
 from os.path import dirname, join
 import numpy as np
 import nltk
 import pandas as pd
-from .contractions import *
+from python_data_utils.nlp.contractions import *
 
 
 def words(text): return re.findall(r'\w+', text.lower())
@@ -155,19 +155,24 @@ def cluster_words_by_edit_distance1(words, dist=2):
     return cluster
 
 
-def documents_clustering_affinity_propagation(documents, similarity_matrix, verbose=True, **kwargs):
+def documents_clustering_affinity_propagation(documents, similarity_matrix, document_id_included=False, verbose=True, **kwargs):
     """
     Create clusters with affinity propagation using given similarity matrix between documents as input.
     """
     from sklearn.cluster import AffinityPropagation
+    documents = np.array(documents)
     affprop = AffinityPropagation(affinity="precomputed", **kwargs)
     affprop.fit(similarity_matrix)
     clusters = dict()
     for cluster_id in np.unique(affprop.labels_):
-        exemplar = documents[affprop.cluster_centers_indices_[cluster_id]][0]
-        clusters[exemplar] = frozenset([idx for idx, _ in documents[np.nonzero(affprop.labels_ == cluster_id)]])
+        exemplar = documents[affprop.cluster_centers_indices_[cluster_id]]
+        if document_id_included:
+            exemplar = exemplar[0]
+            clusters[exemplar] = frozenset([idx for idx, _ in documents[np.flatnonzero(affprop.labels_ == cluster_id)]])
+        else:
+            clusters[exemplar] = frozenset([d for d in documents[np.flatnonzero(affprop.labels_ == cluster_id)]])
         if verbose:
-            print(" - *%s:* %s" % (exemplar, ", ".join(str(idx) for idx in clusters[exemplar])))
+            print(" - *%s:* %s" % (exemplar, ", ".join(str(d) for d in clusters[exemplar])))
     return clusters
 
 
@@ -191,7 +196,7 @@ def cluster_words_by_edit_distance2(words, verbose=True, **kwargs):
 
 def documents_similarity_jaccard_affinity(documents, verbose=True, **kwargs):
     """
-    Cluster text documents with affinity propogation based on jaccard similarity scores.
+    Cluster text documents with affinity propagation based on jaccard similarity scores.
 
     :param documents: list of tuples of type [(int, str),...]
         Each tuple in list of documents is a pair of document id (int) and document text (str).
@@ -200,13 +205,92 @@ def documents_similarity_jaccard_affinity(documents, verbose=True, **kwargs):
 
     # Computer jaccard similarity between documents
     import distance
-    from ..numpy_utils import create_symmetric_matrix
+    from python_data_utils.numpy_utils import create_symmetric_matrix
     documents = np.array([(idx, set(doc.split(" "))) for idx, doc in documents])
     jaccard_similarity = [0 if idx1 == idx2 else -1 * distance.jaccard(doc1, doc2) for idx1, doc1 in documents for idx2, doc2 in documents if idx1 <= idx2]
     jaccard_similarity = create_symmetric_matrix(jaccard_similarity)
 
     # Create clusters with affinity propagation using jaccard similarity between documents as input.
-    return documents_clustering_affinity_propagation(documents, jaccard_similarity, verbose, **kwargs)
+    return documents_clustering_affinity_propagation(documents, jaccard_similarity, True, verbose, **kwargs)
+
+
+def unilateral_jaccard(documents: list, depth: int=1) -> np.ndarray:
+    """
+    More information in the paper: Unilateral Jaccard Similarity Coefficient
+    https://pdfs.semanticscholar.org/3031/c9f0c265571846cc2bfd7d8ca3538918a355.pdf
+
+    Compute a graph G where nodes = documents and edges represents intersection in words occurring between documents.
+    The uJaccard similarity score is the number of paths in G between pairs of documents within maximum :depth: distance.
+
+    uJaccard(A, B) = |paths(A, B, depth)| / |edges(A)|
+
+    :param documents:  list of sets [set,...]
+        The sets represent a single document. The elements of the set are essentially the "words".
+    :param depth: int
+        Maximum path length between documents
+    """
+    document_edges = [int(len(doc1.intersection(doc2)) > 0) if i != i + j else 0 for i, doc1 in enumerate(documents) for j, doc2 in enumerate(documents[i:])]
+    from python_data_utils.numpy_utils import create_symmetric_matrix
+    document_edges = create_symmetric_matrix(document_edges)
+    uJaccard = np.full((len(documents),) * 2, -1.)
+
+    def get_all_paths_util(u, v, edges, depth, all_paths, visited, path):
+        # If exceeds depth, return without doing anything
+        if depth == 0:
+            return
+
+        # Mark the current node as visited and store in path
+        visited[u] = True
+        path.append(u)
+
+        # If current vertex is same as destination, then print
+        # append the path to all paths list
+        if u == v:
+            all_paths.append(path[:])
+        else:
+            # If current vertex is not destination
+            # Recur for all the vertices adjacent to this vertex
+            for i, e in enumerate(edges[u]):
+                if e == 1 and not visited[i]:
+                    get_all_paths_util(i, v, edges, depth - 1, all_paths, visited, path)
+
+        # Remove current vertex from path[] and mark it as unvisited
+        path.pop()
+        visited[u] = False
+
+    def n_paths_u_to_v(u, v, edges, depth):
+        assert depth > 0
+        visited = [False] * len(edges[0])
+        paths_to_v = []
+        get_all_paths_util(u, v, edges, depth, paths_to_v, visited, [])
+        return len(paths_to_v)
+
+    for i, j in np.ndindex(*uJaccard.shape):
+        if i == j:
+            uJaccard[i, j] = 1.
+            continue
+        n_edges = sum(document_edges[i])
+        if n_edges > 0:
+            x = n_paths_u_to_v(i, j, document_edges, depth)
+            uJaccard[i, j] = x / n_edges
+        else:
+            uJaccard[i, j] = 0.
+
+    return uJaccard
+
+
+def documents_similarity_ujaccard_affinity(documents, depth=3, verbose=True, **kwargs):
+    """
+    Cluster text documents with affinity propagation based on Unilateral Jaccard similarity scores.
+
+    :param documents: list of tuples of type [(int, str),...]
+        Each tuple in list of documents is a pair of document id (int) and document text (str).
+    """
+    assert isinstance(verbose, bool)
+
+    # Computer jaccard similarity between documents
+    uJaccard_similarity = unilateral_jaccard([set(doc.split(" ")) for _, doc in documents], depth=depth)
+    return documents_clustering_affinity_propagation(documents, uJaccard_similarity, True, verbose, **kwargs)
 
 
 def count_words(sentence, delimiter=' '):
