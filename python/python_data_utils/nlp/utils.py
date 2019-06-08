@@ -266,12 +266,19 @@ def unilateral_jaccard(documents: list, depth: int=1) -> np.ndarray:
         return len(paths_to_v)
 
     for i, j in np.ndindex(*uJaccard.shape):
+        # Similarity score between same nodes is always 100%
         if i == j:
             uJaccard[i, j] = 1.
             continue
+
+        # Compute the number of outgoing edges from node i
         n_edges = sum(document_edges[i])
+
+        # Check > 0 to avoid div by 0.
         if n_edges > 0:
-            x = n_paths_u_to_v(i, j, document_edges, depth)
+            # # paths from i to j equals # paths from j to i, therefore, compute # paths
+            # from i to j if # paths from j to i is not already computed else use that
+            x = n_paths_u_to_v(i, j, document_edges, depth) if uJaccard[j, i] == -1. else uJaccard[j, i]
             uJaccard[i, j] = x / n_edges
         else:
             uJaccard[i, j] = 0.
