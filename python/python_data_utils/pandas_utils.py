@@ -540,9 +540,10 @@ def categorical_interaction_plot(df, col1, col2, by, figsize=(6, 6), **plot_kwar
                             colors=['red', 'blue'], markers=['D', '^'], ms=10, **plot_kwargs)
 
 
-def drop_duplicates(df, columns):
+def drop_duplicates_sorted(df, columns):
     '''
-    Drop duplicate rows based on unique values from combination of given columns.
+    Drop duplicate rows based on unique combination of vales from given columns.
+    Combinations will be sorted on row axis before dropping duplicates.
 
     :param df: pd.DataFrame
     :param columns: list of str
