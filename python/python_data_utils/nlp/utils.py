@@ -15,14 +15,16 @@ import pandas as pd
 from python_data_utils.nlp.contractions import *
 
 
-def words(text): return re.findall(r'\w+', text.lower())
+def words(text):
+    return re.findall(r'\w+', text.lower())
 
 
 def create_dictionary(corpus=None, file_path=None):
     if file_path:
         corpus = open(file_path).read()
     if not corpus:
-        raise ValueError('String corpus or file_path (path/to/corpus) must be given.')
+        raise ValueError(
+            'String corpus or file_path (path/to/corpus) must be given.')
     return Counter(words(corpus))
 
 
@@ -53,8 +55,9 @@ def words_dictionary_filepath(lang='en', size='50k'):
         lang: str, default='en'
             Currently only English (en) / Dutch (nl) supported.
         size: str, default='50k'
-            Use the small dictionary containing only top '50k' words or 'full' dictionary.
-            Full dictionary is very large and can result in large running times.
+            Use the small dictionary containing only top '50k'
+            words or 'full' dictionary. Full dictionary is very large
+            and can result in large running times.
     """
     return join(words_data_folder_path(lang), '{}_{}.txt'.format(lang, size))
 
@@ -64,8 +67,9 @@ def words_dictionary_trie_filepath(lang='en', size='50k'):
         lang: str, default='en'
             Currently only English (en) / Dutch (nl) supported.
         size: str, default='50k'
-            Use the small dictionary containing only top '50k' words or 'full' dictionary.
-            Full dictionary is very large and can result in large running times.
+            Use the small dictionary containing only top '50k'
+            words or 'full' dictionary. Full dictionary is very large
+            and can result in large running times.
     """
     return join(words_data_folder_path(lang), '{}_{}_trie'.format(lang, size))
 
@@ -75,8 +79,9 @@ def words_set_dictionary(lang='en', size='50k'):
         lang: str, default='en'
             Currently only English (en) / Dutch (nl) supported.
         size: str, default='50k'
-            Use the small dictionary containing only top '50k' words or 'full' dictionary.
-            Full dictionary is very large and can result in large running times.
+            Use the small dictionary containing only top '50k'
+            words or 'full' dictionary. Full dictionary is very large
+            and can result in large running times.
     """
     return create_dictionary_from_csv(words_dictionary_filepath(lang, size))
 
@@ -86,10 +91,12 @@ def words_trie_dictionary(lang='en', size='50k'):
         lang: str, default='en'
             Currently only English (en) / Dutch (nl) supported.
         size: str, default='50k'
-            Use the small dictionary containing only top '50k' words or 'full' dictionary.
-            Full dictionary is very large and can result in large running times.
+            Use the small dictionary containing only top '50k'
+            words or 'full' dictionary. Full dictionary is very large
+            and can result in large running times.
     """
-    return create_trie_dictionary_from_csv(words_dictionary_filepath(lang, size), header='include')
+    return create_trie_dictionary_from_csv(
+        words_dictionary_filepath(lang, size), header='include')
 
 
 def cleanhtml(raw_html):
@@ -144,7 +151,7 @@ def edit_dist(word, dist=2):
 
 def cluster_words_by_edit_distance1(words, dist=2):
     assert isinstance(words, (list, tuple)) and any(isinstance(w, str)
-                                                    for w in words), 'words must be an iterable of strings'
+        for w in words), 'words must be an iterable of strings'
     assert isinstance(dist, int)
     cluster = dict()
     for i, w in enumerate(words):
@@ -155,149 +162,26 @@ def cluster_words_by_edit_distance1(words, dist=2):
     return cluster
 
 
-def documents_clustering_affinity_propagation(documents, similarity_matrix, document_id_included=False, verbose=True, **kwargs):
-    """
-    Create clusters with affinity propagation using given similarity matrix between documents as input.
-    """
-    from sklearn.cluster import AffinityPropagation
-    documents = np.array(documents)
-    affprop = AffinityPropagation(affinity="precomputed", **kwargs)
-    affprop.fit(similarity_matrix)
-    clusters = dict()
-    for cluster_id in np.unique(affprop.labels_):
-        exemplar = documents[affprop.cluster_centers_indices_[cluster_id]]
-        if document_id_included:
-            exemplar = exemplar[0]
-            clusters[exemplar] = frozenset([idx for idx, _ in documents[np.flatnonzero(affprop.labels_ == cluster_id)]])
-        else:
-            clusters[exemplar] = frozenset([d for d in documents[np.flatnonzero(affprop.labels_ == cluster_id)]])
-        if verbose:
-            print(" - *%s:* %s" % (exemplar, ", ".join(str(d) for d in clusters[exemplar])))
-    return clusters
-
-
 def cluster_words_by_edit_distance2(words, verbose=True, **kwargs):
     """
-    Paper:
-        L Frey, Brendan J., and Delbert Dueck. "Clustering by passing messages between data points."
-        science 315.5814 (2007): 972-976..
+    Cluster words with affinity propagation using negative
+    edit distance as similarity measure.
     """
     assert isinstance(words, (list, tuple)) and any(isinstance(w, str)
-                                                    for w in words), 'words must be an iterable of strings'
+        for w in words), 'words must be an iterable of strings'
     assert isinstance(verbose, bool)
 
     # Compute edit distance between words
     import distance
-    lev_similarity = -1 * np.array([[distance.levenshtein(w1, w2) for w1 in words] for w2 in words])
+    lev_similarity = -1 * \
+        np.array([[distance.levenshtein(w1, w2)
+                   for w1 in words] for w2 in words])
 
-    # Compute word clusters with affinity propagation using edit distance similarity between words as input.
-    return documents_clustering_affinity_propagation(words, lev_similarity, verbose, **kwargs)
-
-
-def documents_similarity_jaccard_affinity(documents, verbose=True, **kwargs):
-    """
-    Cluster text documents with affinity propagation based on jaccard similarity scores.
-
-    :param documents: list of tuples of type [(int, str),...]
-        Each tuple in list of documents is a pair of document id (int) and document text (str).
-    """
-    assert isinstance(verbose, bool)
-
-    # Computer jaccard similarity between documents
-    import distance
-    from python_data_utils.numpy_utils import create_symmetric_matrix
-    documents = np.array([(idx, set(doc.split(" "))) for idx, doc in documents])
-    jaccard_similarity = [0 if idx1 == idx2 else -1 * distance.jaccard(doc1, doc2) for idx1, doc1 in documents for idx2, doc2 in documents if idx1 <= idx2]
-    jaccard_similarity = create_symmetric_matrix(jaccard_similarity)
-
-    # Create clusters with affinity propagation using jaccard similarity between documents as input.
-    return documents_clustering_affinity_propagation(documents, jaccard_similarity, True, verbose, **kwargs)
-
-
-def unilateral_jaccard(documents: list, depth: int=1) -> np.ndarray:
-    """
-    More information in the paper: Unilateral Jaccard Similarity Coefficient
-    https://pdfs.semanticscholar.org/3031/c9f0c265571846cc2bfd7d8ca3538918a355.pdf
-
-    Compute a graph G where nodes = documents and edges represents intersection in words occurring between documents.
-    The uJaccard similarity score is the number of paths in G between pairs of documents within maximum :depth: distance.
-
-    uJaccard(A, B) = |paths(A, B, depth)| / |edges(A)|
-
-    :param documents:  list of sets [set,...]
-        The sets represent a single document. The elements of the set are essentially the "words".
-    :param depth: int
-        Maximum path length between documents
-    """
-    document_edges = [int(len(doc1.intersection(doc2)) > 0) if i != i + j else 0 for i, doc1 in enumerate(documents) for j, doc2 in enumerate(documents[i:])]
-    from python_data_utils.numpy_utils import create_symmetric_matrix
-    document_edges = create_symmetric_matrix(document_edges)
-    uJaccard = np.full((len(documents),) * 2, -1.)
-
-    def get_all_paths_util(u, v, edges, depth, all_paths, visited, path):
-        # If exceeds depth, return without doing anything
-        if depth == 0:
-            return
-
-        # Mark the current node as visited and store in path
-        visited[u] = True
-        path.append(u)
-
-        # If current vertex is same as destination, then print
-        # append the path to all paths list
-        if u == v:
-            all_paths.append(path[:])
-        else:
-            # If current vertex is not destination
-            # Recur for all the vertices adjacent to this vertex
-            for i, e in enumerate(edges[u]):
-                if e == 1 and not visited[i]:
-                    get_all_paths_util(i, v, edges, depth - 1, all_paths, visited, path)
-
-        # Remove current vertex from path[] and mark it as unvisited
-        path.pop()
-        visited[u] = False
-
-    def n_paths_u_to_v(u, v, edges, depth):
-        assert depth > 0
-        visited = [False] * len(edges[0])
-        paths_to_v = []
-        get_all_paths_util(u, v, edges, depth, paths_to_v, visited, [])
-        return len(paths_to_v)
-
-    for i, j in np.ndindex(*uJaccard.shape):
-        # Similarity score between same nodes is always 100%
-        if i == j:
-            uJaccard[i, j] = 1.
-            continue
-
-        # Compute the number of outgoing edges from node i
-        n_edges = sum(document_edges[i])
-
-        # Check > 0 to avoid div by 0.
-        if n_edges > 0:
-            # # paths from i to j equals # paths from j to i, therefore, compute # paths
-            # from i to j if # paths from j to i is not already computed else use that
-            x = n_paths_u_to_v(i, j, document_edges, depth) if uJaccard[j, i] == -1. else uJaccard[j, i]
-            uJaccard[i, j] = x / n_edges
-        else:
-            uJaccard[i, j] = 0.
-
-    return uJaccard
-
-
-def documents_similarity_ujaccard_affinity(documents, depth=3, verbose=True, **kwargs):
-    """
-    Cluster text documents with affinity propagation based on Unilateral Jaccard similarity scores.
-
-    :param documents: list of tuples of type [(int, str),...]
-        Each tuple in list of documents is a pair of document id (int) and document text (str).
-    """
-    assert isinstance(verbose, bool)
-
-    # Computer jaccard similarity between documents
-    uJaccard_similarity = unilateral_jaccard([set(doc.split(" ")) for _, doc in documents], depth=depth)
-    return documents_clustering_affinity_propagation(documents, uJaccard_similarity, True, verbose, **kwargs)
+    # Compute word clusters with affinity propagation
+    # using edit distance similarity between words as input.
+    from python_data_utils.cluster.affinity_propagation \
+        import affinity_propagation
+    return affinity_propagation(words, lev_similarity, verbose, **kwargs)
 
 
 def count_words(sentence, delimiter=' '):
@@ -333,8 +217,9 @@ def join_bigrams_with_replacements(s, replacements=lambda w, default: default):
         s: iterable of list of strings
             Example: [("I", "have"), ("have", "to"), ("to", "go")]
         replacements:
-            Function that takes the following parameters. By default, it returns the default
-            value which simply joins all the bigrams together.
+            Function that takes the following parameters. By default,
+            it returns the default value which simply joins all the bigrams
+            together.
                 w: string
                     A bigram string. Example: "wi fi"
                 default:
@@ -342,7 +227,8 @@ def join_bigrams_with_replacements(s, replacements=lambda w, default: default):
                 returns: string
                     A replacement string, e.g., "wifi"
         returns: string
-            A string sentence joining all bigrams correctly including the replacements (if any).
+            A string sentence joining all bigrams correctly including the
+            replacements (if any).
     """
     s = iter(s)
     first = next(s, None)
@@ -362,12 +248,15 @@ def join_bigrams_with_replacements(s, replacements=lambda w, default: default):
     return string
 
 
-def correct_word_compounding(dfs, language_dictionary, split_on_both_accurate=True, threshold=3):
+def correct_word_compounding(dfs, language_dictionary,
+                             split_on_both_accurate=True, threshold=3):
     """
-    List all bigrams which are also written as unigrams by removing one space character
+    List all bigrams which are also written as unigrams
+    by removing one space character
     and filter the ones which contains words not in any dictionary
 
-    Assumptions: every word is unique is only written in one way and there are no spelling errors
+    Assumptions: every word is unique is only written in
+    one way and there are no spelling errors
 
     Heuristic:
         if bigram counts ≈ unibigram counts:
@@ -383,7 +272,8 @@ def correct_word_compounding(dfs, language_dictionary, split_on_both_accurate=Tr
                     if split_on_both_accurate:
                         make bigram
                     else:
-                        convert bigram to unigram by removing space (make unibigram)
+                        convert bigram to unigram by removing space
+                        (make unibigram)
                 else:
                     # Assumption: only unibigram version accurate
                     make unibigram
@@ -395,7 +285,8 @@ def correct_word_compounding(dfs, language_dictionary, split_on_both_accurate=Tr
                     # Assumption: Unibigram version is still more accurate
                     make unibigram
                 else:
-                    # Assumption: Unibigram version is not accurate so split instead
+                    # Assumption: Unibigram version is not accurate so
+                    # split instead
                     if both unigrams in language dictionary:
                         make bigram
                     else:
@@ -415,10 +306,18 @@ def correct_word_compounding(dfs, language_dictionary, split_on_both_accurate=Tr
     bigrams_also_in_unigrams = set(
         b for b in bigrams if b.replace(" ", "") in unigrams)
 
-    bigrams = pd.DataFrame([(b, b.replace(" ", ""), b.replace(" ", "-"), dfs.str.contains(b).sum(), dfs.str.contains(b.replace(" ", "") + "|" + b.replace(" ", "-")).sum())
-                            for b in bigrams_also_in_unigrams], columns=['bigram', 'unibigram0', 'unibigram1', 'count_occurence_bigram', 'count_occurence_unibigram'])
+    bigrams = pd.DataFrame([(
+        b,
+        b.replace(" ", ""),
+        b.replace(" ", "-"),
+        dfs.str.contains(b).sum(),
+        dfs.str.contains(b.replace(" ", "") + "|" + b.replace(" ", "-")).sum()
+    ) for b in bigrams_also_in_unigrams], columns=[
+        'bigram', 'unibigram0', 'unibigram1',
+        'count_occurence_bigram', 'count_occurence_unibigram'])
     bigrams['near_equal'] = abs(
-        bigrams["count_occurence_bigram"] - bigrams["count_occurence_unibigram"]) < threshold
+        bigrams["count_occurence_bigram"] -
+        bigrams["count_occurence_unibigram"]) < threshold
     bigrams['unibigram_in_dict?'] = bigrams['bigram'].apply(
         lambda bi: bi.replace(" ", "") in language_dictionary)
     bigrams['unigram0_in_dict?'] = bigrams['bigram'].apply(
@@ -427,19 +326,42 @@ def correct_word_compounding(dfs, language_dictionary, split_on_both_accurate=Tr
         lambda bi: bi.split(' ')[1] in language_dictionary)
     bigrams['both_unigrams_in_dict?'] = (
         bigrams['unigram0_in_dict?']) & (bigrams['unigram1_in_dict?'])
-    make_bigram_mask = (((bigrams["near_equal"]) & ((~bigrams["unibigram_in_dict?"])
-        | (bigrams["unibigram_in_dict?"] & bigrams["both_unigrams_in_dict?"] & split_on_both_accurate)))
-    | ((~bigrams["near_equal"]) & (((bigrams["count_occurence_unibigram"] > bigrams["count_occurence_bigram"])
-        & (~bigrams["unibigram_in_dict?"]) & (bigrams['both_unigrams_in_dict?']))
-    | ((bigrams["count_occurence_unibigram"] <= bigrams["count_occurence_bigram"])
-        & (bigrams['both_unigrams_in_dict?'])))))
+    make_bigram_mask = (
+        (
+            (bigrams["near_equal"]) &
+            (
+                (~bigrams["unibigram_in_dict?"]) |
+                (bigrams["unibigram_in_dict?"] &
+                    bigrams["both_unigrams_in_dict?"] &
+                    split_on_both_accurate)
+            )
+        ) |
+        (
+            (~bigrams["near_equal"]) &
+            (
+                (
+                    (bigrams["count_occurence_unibigram"] >
+                        bigrams["count_occurence_bigram"]) &
+                    (~bigrams["unibigram_in_dict?"]) &
+                    (bigrams['both_unigrams_in_dict?'])
+                ) |
+                (
+                    (bigrams["count_occurence_unibigram"] <=
+                        bigrams["count_occurence_bigram"]) &
+                    (bigrams['both_unigrams_in_dict?'])
+                )
+            )
+        )
+    )
 
     # List of word replacements to perform on the text
     replacements = {}
-    replacements.update({w[1]["unibigram{}".format(i)]: w[1]["bigram"]
-                         for w in bigrams[make_bigram_mask].iterrows() for i in range(2)})
-    replacements.update({w[1]["bigram"]: w[1]["unibigram0"]
-                         for w in bigrams[~make_bigram_mask].iterrows()})
+    replacements.update({
+        w[1]["unibigram{}".format(i)]: w[1]["bigram"]
+        for w in bigrams[make_bigram_mask].iterrows() for i in range(2)})
+    replacements.update({
+        w[1]["bigram"]: w[1]["unibigram0"]
+        for w in bigrams[~make_bigram_mask].iterrows()})
 
     # Make replacements
     tokens = tokens.apply(lambda s: [replacements.get(w, w) for w in s])
@@ -454,7 +376,8 @@ def correct_word_compounding(dfs, language_dictionary, split_on_both_accurate=Tr
 def tf_idf(documents):
     N = len(documents)
     corpus = " ".join(documents)
-    corpus_deduplicated = " ".join([" ".join(frozenset(d.split(" "))) for d in documents])
+    corpus_deduplicated = " ".join(
+        [" ".join(frozenset(d.split(" "))) for d in documents])
 
     tf = create_dictionary(corpus=corpus)
     df = create_dictionary(corpus=corpus_deduplicated)
