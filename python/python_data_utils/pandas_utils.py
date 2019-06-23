@@ -34,34 +34,40 @@ def df_mem_usage(df):
 
     # get average memory usage per datatype
     dtypes = [c.name for c in df.dtypes.unique()]
-    result.update(
-        {'Average memory usage for {} columns'.format(c): None for c in dtypes})
+    result.update({
+        'Average memory usage for {} columns'.format(c): None for c in dtypes})
     for dtype in dtypes:
-        usage_b = df.select_dtypes(include=[dtype]).memory_usage(deep=True).mean()
+        usage_b = df.select_dtypes(include=[dtype])\
+            .memory_usage(deep=True).mean()
         result.update({
-            "Average memory usage for {} columns".format(dtype): "{:03.2f} MB".format(usage_b / 1024 ** 2)})
+            "Average memory usage for {} columns".format(dtype):
+            "{:03.2f} MB".format(usage_b / 1024 ** 2)})
 
     return result
 
 
-def optimize_dataframe(df, categorical=[], always_positive_ints=[], cat_nunique_ratio=.5, verbose=False):
+def optimize_dataframe(df, categorical=[], always_positive_ints=[],
+                       cat_nunique_ratio=.5, verbose=False):
     """
     Optimize the memory usage of the given dataframe by modifying data types.
     :param df: pd.DataFrame
     :param categorical: list of (str, bool) pairs, optional (default=[])
-        List of categorical variables with boolean representing if they are ordered or not.
+        List of categorical variables with boolean representing if
+        they are ordered or not.
     :param always_positive_ints: list of str, optional (default=[])
         List of always positive INTEGER variables
     :param cat_nunique_ratio: 0.0 <= float <= 1.0, (default=0.5)
-        Ratio of unique values to total values. Used for detecting cateogrical columns.
+        Ratio of unique values to total values. Used for detecting
+        categorical columns.
     :param verbose: bool, optional (default=False)
         Print before and after memory usage
     :return df: pd.DataFrame
     """
     cat = [] if len(categorical) == 0 else list(zip(*categorical))[0]
 
-    def getCols(dtype): return df.columns[df.dtypes == dtype].difference(
-        always_positive_ints).difference(cat)
+    def getCols(dtype):
+        return df.columns[df.dtypes == dtype]\
+            .difference(always_positive_ints).difference(cat)
 
     if verbose:
         print('Before:', df_mem_usage(df))
@@ -82,7 +88,8 @@ def optimize_dataframe(df, categorical=[], always_positive_ints=[], cat_nunique_
     cols = getCols('float')
     df.loc[:, cols] = df[cols].apply(pd.to_numeric, downcast='float')
 
-    # convert object columns with less than {cat_nunique_ratio}% unique values to categorical
+    # convert object columns with less than {cat_nunique_ratio}%
+    # unique values to categorical
     for col in getCols('object'):
         num_unique_values = len(df[col].unique())
         num_total_values = len(df[col].dropna())
@@ -93,11 +100,14 @@ def optimize_dataframe(df, categorical=[], always_positive_ints=[], cat_nunique_
     for col, prop in categorical:
         if col in df.columns and df.dtypes[col].name != 'category':
             if isinstance(prop, (list, tuple)):
-                df.loc[:, col] = df[col].astype(pd.api.types.CategoricalDtype(categories=prop[1],
-                                                                              ordered=prop[0]))
+                df.loc[:, col] = df[col].astype(
+                    pd.api.types.CategoricalDtype(
+                        categories=prop[1], ordered=prop[0]))
             elif isinstance(prop, dict):
-                df.loc[:, col] = df[col].astype(pd.api.types.CategoricalDtype(categories=prop['categories'],
-                                                                              ordered=prop['ordered']))
+                df.loc[:, col] = df[col].astype(
+                    pd.api.types.CategoricalDtype(
+                        categories=prop['categories'],
+                        ordered=prop['ordered']))
             elif isinstance(prop, bool):
                 df.loc[:, col] = df[col].astype(
                     pd.api.types.CategoricalDtype(ordered=prop))
@@ -129,15 +139,17 @@ def tsv_to_pandas_generator(file_path, target_label=None, chunksize=None):
     assert target_label is None or isinstance(target_label, six.string_types)
     assert isinstance(chunksize, int)
 
-    for chunk in pd.read_csv(file_path, delimiter='\t', na_values=r'\N', chunksize=chunksize):
+    for chunk in pd.read_csv(
+            file_path, delimiter='\t', na_values=r'\N', chunksize=chunksize):
         if target_label:
             yield chunk.drop([target_label], axis=1), chunk[target_label]
         else:
             yield chunk
 
 
-def tsv_to_pandas(file_path, target_label=None, memory_optimize=True, categorical=[],
-                  always_positive=[], save_pickle_obj=False, verbose=False):
+def tsv_to_pandas(file_path, target_label=None, memory_optimize=True,
+                  categorical=[], always_positive=[], save_pickle_obj=False,
+                  verbose=False):
     """
     Read data from TSV file as pandas DataFrame.
     :param file_path: str
@@ -145,8 +157,8 @@ def tsv_to_pandas(file_path, target_label=None, memory_optimize=True, categorica
     :param target_label: str
         target label column name
     :param memory_optimize: bool, optional (default=True)
-        Optimize the data types of the columns. Will take some more time to compute but will
-        reduce memory usage of the dataframe.
+        Optimize the data types of the columns. Will take some more
+        time to compute but will reduce memory usage of the dataframe.
     :param categorical: list of str, optional (default=[])
         List of categorical variables
     :param always_positive: list of str, optional (default=[])
@@ -154,8 +166,8 @@ def tsv_to_pandas(file_path, target_label=None, memory_optimize=True, categorica
     :param verbose: bool, optional (default=False)
         Output time to load the data and memory usage.
     :param save_pickle_obj: bool, str, optional (default=False)
-        Save the final result as a pickle object. Save path can be given as a string.
-        Otherwise, saved in the same directory as the input file path.
+        Save the final result as a pickle object. Save path can be given as a
+        string. Otherwise, saved in the same directory as the input file path.
     :return:
         X: pd.DataFrame
         y: pd.Series
@@ -208,10 +220,12 @@ def tsv_to_pandas(file_path, target_label=None, memory_optimize=True, categorica
         if memory_optimize:
             if i == 0:
                 always_positive = [
-                    col for c0 in always_positive for col in X.columns if c0 in col]
+                    col for c0 in always_positive for col in X.columns
+                    if c0 in col]
 
             X = optimize_dataframe(
-                X, always_positive_ints=always_positive, categorical=categorical)
+                X, always_positive_ints=always_positive,
+                categorical=categorical)
 
             # save intermediate results
             with open("{}/{}.pkl".format(results_dir, i), 'wb') as f:
@@ -273,7 +287,8 @@ def pandas_to_tsv(df, save_file_path, index=False, mode='w', header=True):
     :param df: pd.DataFrame
         DataFrame to save as tsv
     :param save_file_path: str
-        File save path. Path must exist, if not, a path will be created automatically.
+        File save path. if path does not exist, it will be
+        created automatically.
     :param index: bool
         write the row names to output.
     :param mode: str
@@ -281,10 +296,10 @@ def pandas_to_tsv(df, save_file_path, index=False, mode='w', header=True):
     :param header: bool
         write the column names to output.
     """
-    assert isinstance(save_file_path, six.string_types) and len(
-        save_file_path) > 0
-    assert isinstance(
-        df, pd.DataFrame) and not df.empty, 'df must be a non-empty pandas.DataFrame'
+    assert isinstance(save_file_path, six.string_types) and\
+        len(save_file_path) > 0
+    assert isinstance(df, pd.DataFrame) and not df.empty,\
+        'df must be a non-empty pd.DataFrame'
     assert isinstance(mode, six.string_types)
 
     # make a new directory to save the file
@@ -303,9 +318,13 @@ def pandas_to_tsv(df, save_file_path, index=False, mode='w', header=True):
 
 def list_column_to_mutliple_columns(s):
     """
-    Expands a single column containing variable-length lists to multiple binary columns.
-    :param s: List column pandas series
-    :return df: pd.DataFrame with multiple columns, one per unique item in all lists.
+    Expands a single column containing variable-length lists
+    to multiple binary columns.
+
+    :param s: pd.Series
+        Series column of lists.
+    :return df: pd.DataFrame
+        Dataframe with multiple columns, one per unique item in all lists.
     """
     return pd.get_dummies(s.apply(pd.Series).stack()).sum(level=0)
 
@@ -322,18 +341,22 @@ def get_missingness_perc(df):
         Pandas dataframe with index as columns from df and values
         as missingness level of corresponding column.
     """
-    missingness = pd.DataFrame([(len(df[c]) - df[c].count()) * 100.00 / len(df[c]) for c in df],
-                               index=df.columns, columns=['Missingness %'])
+    missingness = pd.DataFrame(
+        [(len(df[c]) - df[c].count()) * 100.00 / len(df[c]) for c in df],
+        index=df.columns, columns=['Missingness %'])
     return missingness
 
 
 def correlations_to_column(df, col, jupyter_nb=False):
     """
     Get correlation of all columns to given column :col:.
-    If :jupyter_nb: is true, get interactive widget slider to filter columns by spearman correlation strength.
+    If :jupyter_nb: is true, get interactive widget slider to
+    filter columns by spearman correlation strength.
 
     :param df: pd.DataFrame
-    :label_col: Label column for which we find correlation to all other columns.
+    :col: str
+        Label column for which we find correlation
+        to all other columns.
     :return corr: pd.DataFrame
         Dataframe containing 2 columns: one for correlation values obtained
         using Pearson Rho test and one with Spearman Rank test.
@@ -341,10 +364,12 @@ def correlations_to_column(df, col, jupyter_nb=False):
         If :jupyter_nb: is true, Jupyter  ranging from 0.0 to 1.0
         over spearman correlation strength to filter columns interactively.
     """
-    # Get Pearson correlation - to describe extent of linear correlation with label
+    # Get Pearson correlation - to describe extent of linear correlation
+    # with label
     pearson = df.corr(method="pearson")[col].rename("pearson")
 
-    # Get Spearman rank correlation - to describe extent of any monotonic relationship with label
+    # Get Spearman rank correlation - to describe extent of any
+    # monotonic relationship with label
     spearman = df.corr(method="spearman")[col].rename("spearman")
 
     corr = pd.concat([pearson, spearman], axis=1)
@@ -358,12 +383,15 @@ def correlations_to_column(df, col, jupyter_nb=False):
             if corr_strength == 0.0:
                 x = corr
             else:
-                x = corr.where((abs(corr.spearman) > corr_strength) & (corr.spearman != 1)).dropna()
+                x = corr.where(
+                    (abs(corr.spearman) > corr_strength) &
+                    (corr.spearman != 1)).dropna()
             print('N: {}'.format(x.shape[0]))
             display(x)
             return x
 
-        corr_slider = widgets.FloatSlider(value=0.0, min=0.0, max=1.0, step=0.0001)
+        corr_slider = widgets.FloatSlider(
+            value=0.0, min=0.0, max=1.0, step=0.0001)
         w = interactive(view_correlations, corr_strength=corr_slider)
 
         return corr, w
@@ -372,12 +400,14 @@ def correlations_to_column(df, col, jupyter_nb=False):
 
 
 def feature_corr_matrix(df, size=10, method="spearman"):
-    """Function plots a graphical correlation matrix for each pair of columns in the dataframe.
+    """
+    Function plots a graphical correlation matrix for each
+    pair of columns in the dataframe.
 
-    Input:
-        df: pd.DataFrame
-        size: vertical and horizontal size of the plot
-        method: correlation test method
+    :param df: pd.DataFrame
+    :param size: vertical and horizontal size of the plot
+    :param method: correlation test method
+    :return fig: matplotlib figure object
     """
     corr = df.corr(method=method)
     fig, ax = plt.subplots(figsize=(size, size))
@@ -433,13 +463,15 @@ def np_to_pd(X, columns=None):
         if columns is not None:
             assert len(columns) == len(X[0])
             return pd.DataFrame(X, columns=columns)
-        return pd.DataFrame(X, columns=['var_{}'.format(k) for k in range(np.atleast_2d(X).shape[1])])
+        return pd.DataFrame(
+            X, columns=['var_{}'.format(k) for k in range(
+                np.atleast_2d(X).shape[1])])
     else:
         raise ValueError('Input X must be a numpy array')
 
 
-def balanced_sampling(df_minority, df_majority, minority_upsampling_ratio=0.2, only_upsample=False,
-                      use_smote_upsampling=False):
+def balanced_sampling(df_minority, df_majority, minority_upsampling_ratio=0.2,
+                      only_upsample=False, use_smote_upsampling=False):
     # Upsample minority class by minority_upsampling_ratio%
     new_size = int(df_minority.shape[0] * (1 + minority_upsampling_ratio))
 
@@ -534,21 +566,25 @@ def feature_feature_relationship_one(df, cols, by=lambda x: True):
     return fig
 
 
-def categorical_interaction_plot(df, col1, col2, by, figsize=(6, 6), **plot_kwargs):
+def categorical_interaction_plot(df, col1, col2, by, figsize=(6, 6),
+                                 **plot_kwargs):
     from statsmodels.graphics.factorplots import interaction_plot
-    return interaction_plot(x=df[col1], trace=by, response=df[col2],
-                            colors=['red', 'blue'], markers=['D', '^'], ms=10, **plot_kwargs)
+    return interaction_plot(
+        x=df[col1], trace=by, response=df[col2],
+        colors=['red', 'blue'], markers=['D', '^'], ms=10, **plot_kwargs)
 
 
 def drop_duplicates_sorted(df, columns):
     '''
-    Drop duplicate rows based on unique combination of vales from given columns.
-    Combinations will be sorted on row axis before dropping duplicates.
+    Drop duplicate rows based on unique combination of vales from
+    given columns. Combinations will be sorted on row axis before
+    dropping duplicates.
 
     :param df: pd.DataFrame
     :param columns: list of str
-        Keeps unique combinations of values across given columns and drops remaining.
-        Note that output will still include all other columns.
+        Keeps unique combinations of values across given columns
+        and drops remaining. Note that output will still include all
+        other columns.
     :return df: pd.DataFrame with duplicates across all :columns: dropped.
     '''
     df['check_string'] = df.apply(lambda row: ''.join(
@@ -569,7 +605,8 @@ def add_NA_indicator_variables(df, inplace=False):
     return df_
 
 
-def nullity_correlation(df, corr_method='spearman', jupyter_nb=False, fill_na=-1):
+def nullity_correlation(df, corr_method='spearman', jupyter_nb=False,
+                        fill_na=-1):
     df_ = df.copy()
 
     # add missingness indicator variables
@@ -586,13 +623,15 @@ def nullity_correlation(df, corr_method='spearman', jupyter_nb=False, fill_na=-1
     # and right-side columns without the 'is_missing'
     corr = corr[(corr.col1 != corr.col2) &
                 (corr.col2.apply(lambda x: 'NA' in x)) &
-                (corr.apply(lambda row: not(row['col1'] in row['col2'] or row['col2'] in row['col1']), axis=1))]
+                (corr.apply(lambda row: not(row['col1'] in row['col2'] or
+                    row['col2'] in row['col1']), axis=1))]
 
     # sort descending based on value column
     corr['value_abs'] = corr.value.apply(np.abs)
     corr = corr.dropna().sort_values(
         by='value_abs', ascending=False).drop(['value_abs'], axis=1)
-    corr = drop_duplicates(corr, ['col1', 'col2']).reset_index(drop=True)
+    corr = drop_duplicates_sorted(
+        corr, ['col1', 'col2']).reset_index(drop=True)
 
     if jupyter_nb:
         from IPython.display import display
@@ -605,8 +644,11 @@ def nullity_correlation(df, corr_method='spearman', jupyter_nb=False, fill_na=-1
             if corr_strength > 0.0:
                 x = x.where(abs(x.value) > corr_strength).dropna()
             if var_name:
-                x = x.where(x.apply(lambda r: r.col1.lower().startswith(var_name) or
-                                    r.col2.lower().startswith(var_name), axis=1)).dropna()
+                x = x.where(
+                    x.apply(
+                        lambda r: r.col1.lower().startswith(var_name) or
+                        r.col2.lower().startswith(var_name), axis=1)
+                ).dropna()
             print('N: {}'.format(x.shape[0]))
             display(x)
             return x
@@ -648,11 +690,13 @@ def linearity_with_logodds_allcols(df, label_col, figsize=(30, 80), ncols=4):
 
 
 def filter_columns(df, drop_cols=[], keep_cols=[]):
-    # first drop columns; keep_cols takes priority, i.e., columns in both sets will be kept
+    # first drop columns; keep_cols takes priority,
+    # i.e., columns in both sets will be kept
     df.drop(set(drop_cols).difference(keep_cols),
             axis=1, inplace=True, errors="ignore")
 
-    # then keep only columns given in keep_cols; if none given, then keep all remaining
+    # then keep only columns given in keep_cols;
+    # if none given, then keep all remaining
     x = df.columns.intersection(keep_cols)
     if len(x) > 0:
         df = df[x]
@@ -689,8 +733,8 @@ def keep_top_k_categories(s, k=1, dropna=False):
 def df_value_counts(df, normalize=False, delimiter=';'):
     cols = df.columns
     df = df.copy()
-    df = df.apply(lambda row: delimiter.join((str(x)
-                                              for x in row)), axis=1).value_counts(normalize=normalize)
+    df = df.apply(lambda row: delimiter.join((
+        str(x) for x in row)), axis=1).value_counts(normalize=normalize)
     df = df.reset_index()
     df[cols] = df['index'].str.split(delimiter, expand=True)
     df = df.drop('index', axis=1)
@@ -712,7 +756,8 @@ def get_age_from_dob(s, round=True):
     return age
 
 
-def insert_column(df, column_name, column, after_column=None, before_column=None):
+def insert_column(df, column_name, column, after_column=None,
+                  before_column=None):
     if after_column:
         idx = int((df.columns == after_column).nonzero()[0][0]) + 1
     elif before_column:
@@ -735,7 +780,9 @@ def feature_select_correlation(df, threshold=.5):
     x = []
     while len(cols) > index:
         corr = correlations_to_column(df[cols], cols[index]).spearman
-        corr = corr[(corr.apply(lambda x: abs(x) > threshold)) & (corr.index != cols[index])]
+        corr = corr[
+            (corr.apply(lambda x: abs(x) > threshold)) &
+            (corr.index != cols[index])]
         if len(corr) > 0:
             x.append(pd.DataFrame({
                 'selected': [cols[index]] * len(corr),
@@ -750,13 +797,14 @@ def feature_select_correlation(df, threshold=.5):
 
 def mahalanobis_distance(df):
     cov_matrix = np.cov(df)
-    from python_data_utils import numpy_utils as npu
+    from . import numpy_utils as npu
     if npu.is_pos_def(cov_matrix):
         inv_cov_matrix = np.linalg.inv(cov_matrix)
         if npu.is_pos_def(inv_cov_matrix):
             means = df.mean(axis=0)
             df = df.apply(lambda row: row - means, axis=1)
-            df = df.apply(lambda row: np.sqrt(row @ inv_cov_matrix @ row), axis=1)
+            df = df.apply(
+                lambda row: np.sqrt(row @ inv_cov_matrix @ row), axis=1)
             return df
         else:
             raise ValueError("Covariance Matrix is not positive definite!")
@@ -773,7 +821,8 @@ def outlier_detection_mahalanobis(df, threshold=2):
     return np.argwhere(np.logical_or(md >= up, md <= lo))[:, 0]
 
 
-def save_xls(list_dfs, xls_path, sheet_names=[], to_excel_kws={}, excelwriter_kws={}):
+def save_xls(list_dfs, xls_path, sheet_names=[], to_excel_kws={},
+             excelwriter_kws={}):
     """
     Save list of pandas dataframes to single excel with multiple sheets.
 
