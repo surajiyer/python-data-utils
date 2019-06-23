@@ -6,13 +6,13 @@
 """
 
 import re
-from python_data_utils.nlp.trie import *
+from .trie import *
 from collections import Counter
 from os.path import dirname, join
 import numpy as np
 import nltk
 import pandas as pd
-from python_data_utils.nlp.contractions import *
+from .contractions import *
 
 
 def words(text):
@@ -179,8 +179,7 @@ def cluster_words_by_edit_distance2(words, verbose=True, **kwargs):
 
     # Compute word clusters with affinity propagation
     # using edit distance similarity between words as input.
-    from python_data_utils.cluster.affinity_propagation \
-        import affinity_propagation
+    from ..cluster import affinity_propagation
     return affinity_propagation(words, lev_similarity, verbose, **kwargs)
 
 

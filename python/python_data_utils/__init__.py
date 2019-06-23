@@ -5,4 +5,4 @@
     author: Suraj Iyer
 """
 
-from python_data_utils import decorators
+from . import decorators

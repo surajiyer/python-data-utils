@@ -5,4 +5,4 @@
     author: Suraj Iyer
 """
 
-from python_data_utils.decorators import pandas
+import pandas
