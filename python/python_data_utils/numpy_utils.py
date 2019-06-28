@@ -71,3 +71,31 @@ def is_pos_def(values):
             return False
     else:
         return False
+
+
+def rowwise_dissimilarity(values):
+    """
+    Compare every row with each other row and count number
+    of differences along column axis per row pairs.
+
+    Example:
+        input: [[1, 2, 3],
+                [1, 3, 1],
+                [2, 2, 2]]
+        output: [[0, 2, 2],
+                 [2, 0, 3]
+                 [2, 3, 0]]
+    """
+    return np.sum(values != values[:, None], axis=-1)
+
+
+def rowwise_cosine_similarity(values):
+    """
+    Using every pair of rows in :values: as input, compute
+    pairwise cosine similarity between each row.
+
+    URL: https://stackoverflow.com/questions/41905029/create-cosine-similarity-matrix-numpy
+    """
+    norm = (values * values).sum(0, keepdims=True) ** .5
+    values = values / norm
+    return (values.T @ values)
