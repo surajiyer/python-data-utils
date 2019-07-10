@@ -54,3 +54,4 @@ beautifulsoup4
 # Advanced-Scientific-Computing
 Cython
 numba  # Automatic translation of python functions to JIT compiler executable machine code for performance
+line_profiler

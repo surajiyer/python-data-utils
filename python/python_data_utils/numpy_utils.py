@@ -99,3 +99,11 @@ def rowwise_cosine_similarity(values):
     norm = (values * values).sum(0, keepdims=True) ** .5
     values = values / norm
     return (values.T @ values)
+
+
+def combinations_with_replacements(*arr, k=2):
+    """
+    Take k-size combination pairs from given list of arrays.
+    """
+    # return np.stack(np.meshgrid(*arr)).reshape(-1, k)
+    return np.array(np.meshgrid(*arr)).T.reshape(-1, k)

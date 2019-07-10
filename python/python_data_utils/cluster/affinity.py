@@ -20,6 +20,16 @@ def affinity_propagation(items, similarity_matrix, item_id_included=False,
         "Clustering by passing messages between data points."
         science 315.5814 (2007): 972-976..
     """
+    assert isinstance(items, (list, tuple, np.ndarray)),\
+        'items must be an list, tuple or numpy array.'
+    assert isinstance(similarity_matrix, (list, tuple, np.ndarray))\
+        and len(similarity_matrix) == len(similarity_matrix[0]),\
+        'similarity_matrix must be square shape list, tuple or numpy array.'
+    assert isinstance(item_id_included, bool),\
+        'item_id_included must be a boolean.'
+    assert not item_id_included or \
+        (item_id_included and len(items[0]) == 2), 'item shape incorrect.'
+
     items = np.array(items)
     affprop = AffinityPropagation(affinity="precomputed", **kwargs)
     affprop.fit(similarity_matrix)
@@ -46,16 +56,19 @@ def affinity_jaccard(items, verbose=True, **kwargs):
     :param items: list of tuples of type [(int, str),...]
         Each tuple in list of items is a pair of item id (int) and item (str).
     """
-    assert isinstance(verbose, bool)
+    assert isinstance(items, (list, tuple, np.ndarray)),\
+        'items must be an list, tuple or numpy array.'
+    assert isinstance(verbose, bool), 'verbose must be a boolean.'
 
     # Compute Jaccard similarity between items
     import distance
     from ..numpy_utils import create_symmetric_matrix
-    items = np.array([(idx, set(doc.split(" "))) for idx, doc in items])
+    items = [(idx, set(doc.split(" "))) for idx, doc in items]
     jaccard_similarity = [
         0 if idx1 == idx2 else -1 * distance.jaccard(doc1, doc2)
         for idx1, doc1 in items for idx2, doc2 in items if idx1 <= idx2]
     jaccard_similarity = create_symmetric_matrix(jaccard_similarity)
+    items = [(idx, " ".join(item)) for idx, item in items]
 
     # Create clusters with affinity propagation using
     # jaccard similarity between documents as input.
@@ -71,11 +84,15 @@ def affinity_ujaccard(items, depth=3, verbose=True, **kwargs):
     :param items: list of tuples of type [(int, str),...]
         Each tuple in list of items is a pair of item id (int) and item (str).
     """
-    assert isinstance(verbose, bool)
+    assert isinstance(items, (list, tuple, np.ndarray)),\
+        'items must be an list, tuple or numpy array.'
+    assert isinstance(depth, int) and depth > 0,\
+        'depth must be a non-zero integer.'
+    assert isinstance(verbose, bool), 'verbose must be a boolean.'
 
     # Computer unilateral Jaccard similarity between documents
-    from unilateral_jaccard import unilateral_jaccard
-    uJaccard_similarity = unilateral_jaccard(
+    from .unilateral_jaccard import ujaccard_similarity_score
+    uJaccard_similarity = ujaccard_similarity_score(
         [set(doc.split(" ")) for _, doc in items], depth=depth)
     return affinity_propagation(
         items, uJaccard_similarity, True, verbose, **kwargs)

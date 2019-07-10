@@ -5,5 +5,5 @@
     author: Suraj Iyer
 """
 
-from .affinity_propagation import affinity_propagation, affinity_jaccard, affinity_ujaccard
-from unilateral_jaccard import unilateral_jaccard
+from .affinity import affinity_propagation, affinity_jaccard, affinity_ujaccard
+from .unilateral_jaccard import ujaccard_similarity_score
