@@ -76,7 +76,7 @@ def affinity_jaccard(items, verbose=True, **kwargs):
         items, jaccard_similarity, True, verbose, **kwargs)
 
 
-def affinity_ujaccard(items, depth=3, verbose=True, **kwargs):
+def affinity_ujaccard(items, depth=3, n_jobs=1, verbose=True, **kwargs):
     """
     Cluster text documents with affinity propagation
     based on Unilateral Jaccard similarity scores.
@@ -93,6 +93,6 @@ def affinity_ujaccard(items, depth=3, verbose=True, **kwargs):
     # Computer unilateral Jaccard similarity between documents
     from .unilateral_jaccard import ujaccard_similarity_score
     uJaccard_similarity = ujaccard_similarity_score(
-        [set(doc.split(" ")) for _, doc in items], depth=depth)
+        [set(doc.split(" ")) for _, doc in items], depth=depth, n_jobs=n_jobs)
     return affinity_propagation(
         items, uJaccard_similarity, True, verbose, **kwargs)
