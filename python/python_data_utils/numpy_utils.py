@@ -101,9 +101,43 @@ def rowwise_cosine_similarity(values):
     return (values.T @ values)
 
 
+def permutations_with_replacements(*arr, k=2):
+    """
+    Take k-size combinations of elements from given
+    list of arrays.
+    """
+    return np.array(np.meshgrid(*arr)).T.reshape(-1, k)
+
+
+def permutations(*arr, k=2):
+    """
+    Take k-size permutations of elements from give
+    list of arrays without replacement, i.e., each element
+    in any permutation only occurs once.
+    """
+    values = permutations_with_replacements(*arr, k=k)
+    for i in range(k - 1):
+        values = values[(
+            values[:, i, None] != values[:, range(i + 1, k)]).all(axis=1)]
+    return values
+
+
 def combinations_with_replacements(*arr, k=2):
     """
-    Take k-size combination pairs from given list of arrays.
+    Take k-size combinations of elements from given
+    list of arrays.
     """
-    # return np.stack(np.meshgrid(*arr)).reshape(-1, k)
-    return np.array(np.meshgrid(*arr)).T.reshape(-1, k)
+    return np.unique(np.stack(np.meshgrid(*arr)).reshape(-1, k), axis=0)
+
+
+def combinations(*arr, k=2):
+    """
+    Take k-size combinations of elements from give
+    list of arrays without replacement, i.e., each element
+    in any combination only occurs once.
+    """
+    values = combinations_with_replacements(*arr, k=k)
+    for i in range(k - 1):
+        values = values[(
+            values[:, i, None] != values[:, range(i + 1, k)]).all(axis=1)]
+    return values

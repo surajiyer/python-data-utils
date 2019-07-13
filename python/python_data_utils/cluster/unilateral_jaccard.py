@@ -233,6 +233,8 @@ def ujaccard_similarity_score(G, depth: int=1, n_jobs=1) -> np.ndarray:
     uJaccard = np.identity(len(V), dtype=float)
 
     # initialize multiprocessing queue
+    if not isinstance(n_jobs, int) or n_jobs <= 0:
+        n_jobs = mp.cpu_count()
     q = mp.Queue(maxsize=2 * n_jobs + 1)
 
     # initialize dictionary for return values shared between
