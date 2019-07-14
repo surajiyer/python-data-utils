@@ -28,8 +28,12 @@ def cluster_based_similarity_matrix(partitions: np.ndarray):
     np.ndarray
         cluster based similarity matrix
     """
+    # construct a hyper graph adjacency matrix from these partitions
+    df = pd.concat([
+        pd.get_dummies(partitions[c], prefix=c) for c in partitions], axis=1)
+
+    # calculate a new cluster based similarity matrix
     k = partitions.shape[1]
-    df = pd.concat([pd.get_dummies(partitions[c], prefix=c) for c in partitions], axis=1)
     return (1 / k * (df @ df.transpose(copy=True))).values
 
 
@@ -62,7 +66,7 @@ def pairwise_dissimilarity_matrix(partitions: np.ndarray):
 
 def affinity_matrix(distance_matrix: np.ndarray, c: float):
     """
-    Calculate afinity matrix for given ditance matrix.
+    Calculate affinity matrix for given distance matrix.
 
     Parameters:
     -----------
@@ -99,13 +103,14 @@ def aggregate_matrices(cbsm, pdm, am):
     """
     # D = distance matrix; D = 1 - S.
     D = 1. - ((cbsm + pdm + am) / 3.)
+    assert 0. <= np.min(D) and np.max(D) <= 1.
 
     # Fix triangular inequality within distance matrix
     # by converting to ultra-metric by ensuring the following
     # condition: d_{ij} = min(d_{ij}, max(d_{ik}, d_{kj}))
     _D = np.zeros(D.shape, dtype=np.float32)
     for i, j in np.ndindex(D.shape):
-        _D[i, j] = min(
-            D[i, j], max([max(D[i, k], D[k, j]) for k in np.ndindex(D.shape[0])]))
+        _D[i, j] = min(D[i, j], np.max(
+            (D[i, range(D.shape[0])], D[range(D.shape[0], j)])))
 
     return 1. - _D
