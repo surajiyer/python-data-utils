@@ -17,6 +17,7 @@ distance # For various distance functions
 dill==0.2.8.2
 tqdm
 progressbar2==3.37.1
+hyperopt  # Bayesian optimization for hyper-parameter tuning
 
 # Network-Analysis
 graphviz
