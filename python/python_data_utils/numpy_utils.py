@@ -6,6 +6,18 @@
 """
 
 import numpy as np
+import warnings
+
+try:
+    import numba as nb
+except (ImportError, ModuleNotFoundError):
+    warnings.warn("Numba is not installed. Continuing without it.")
+
+    class Object(object):
+        pass
+    nb = Object()
+    nb.jit = lambda x: x
+    nb.njit = lambda x: x
 
 
 def create_upper_matrix(values):
@@ -35,7 +47,8 @@ def create_upper_matrix(values):
     n = len(values)
     size, length = closest_inverse_sum2n(n)
     upper = np.zeros((size, size))
-    upper[np.triu_indices(size, 0)] = values + [0] * (length - len(values))
+    upper[np.triu_indices(size, 0)] = np.append(
+        values, [0] * (length - len(values)))
     return upper
 
 
@@ -55,6 +68,7 @@ def create_symmetric_matrix(values):
 
 def pairwise_difference(values):
     """
+    Take difference between every element pair.
     """
     return values - values[:, None]
 
@@ -101,43 +115,129 @@ def rowwise_cosine_similarity(values):
     return (values.T @ values)
 
 
-def permutations_with_replacements(*arr, k=2):
+def filter_rows_with_unique_values_only(values):
+    """
+    Keep rows containing all unique elements only.
+
+    URL: https://stackoverflow.com/questions/26958233/numpy-row-wise-unique-elements/
+    """
+    k = values.shape[1]
+    for i in range(k - 1):
+        values = values[(
+            values[:, i, None] != values[:, range(i + 1, k)]).all(axis=1)]
+    return values
+
+
+def unique_per_row(values):
+    """
+    Count number of unique elements per row.
+
+    URL: https://stackoverflow.com/questions/26958233/numpy-row-wise-unique-elements/
+    """
+    weight = 1j * np.linspace(
+        0, values.shape[1], values.shape[0], endpoint=False)
+    b = values + weight[:, None]
+    u, ind, cnt = np.unique(b, return_index=True, return_counts=True)
+    b = np.zeros_like(values)
+    np.put(b, ind, cnt)
+    return b
+
+
+def drop_duplicates(values, ignore_order=True):
+    """
+    Drop duplicate rows.
+
+    Parameters:
+    -------------
+    values: np.ndarray
+        2D rectangular matrix.
+    ignore_order: bool
+        If true, ignore order of elements in each row
+        when computing uniqueness, else different
+        orders of same elements will be treated as
+        unique rows.
+
+    Returns:
+    ---------
+    np.ndarray:
+        2D array with duplicate rows removed.
+    """
+    val = np.sort(values, axis=1) if ignore_order else values
+    u, idx = np.unique(val, return_index=True, axis=0)
+    return values[idx]
+
+
+def permutations_with_replacement(*arr, k=2, shape=None):
     """
     Take k-size combinations of elements from given
     list of arrays.
     """
+    if shape:
+        arr = (range(s) for s in shape)
+        k = len(shape)
     return np.array(np.meshgrid(*arr)).T.reshape(-1, k)
 
 
-def permutations(*arr, k=2):
+def permutations(*arr, k=2, shape=None):
     """
     Take k-size permutations of elements from give
     list of arrays without replacement, i.e., each element
     in any permutation only occurs once.
     """
-    values = permutations_with_replacements(*arr, k=k)
-    for i in range(k - 1):
-        values = values[(
-            values[:, i, None] != values[:, range(i + 1, k)]).all(axis=1)]
+    if shape:
+        arr = (range(s) for s in shape)
+        shape = None
+    values = permutations_with_replacement(*arr, k=k, shape=shape)
+    values = filter_rows_with_unique_values_only(values)
     return values
 
 
-def combinations_with_replacements(*arr, k=2):
+def combinations_with_replacement(*arr, k=2, shape=None):
     """
     Take k-size combinations of elements from given
     list of arrays.
     """
-    return np.unique(np.stack(np.meshgrid(*arr)).reshape(-1, k), axis=0)
+    return drop_duplicates(
+        permutations_with_replacement(*arr, k=k, shape=shape))
 
 
-def combinations(*arr, k=2):
+def combinations(*arr, k=2, shape=None):
     """
     Take k-size combinations of elements from give
     list of arrays without replacement, i.e., each element
     in any combination only occurs once.
     """
-    values = combinations_with_replacements(*arr, k=k)
-    for i in range(k - 1):
-        values = values[(
-            values[:, i, None] != values[:, range(i + 1, k)]).all(axis=1)]
-    return values
+    return drop_duplicates(permutations(*arr, k=k, shape=shape))
+
+
+@nb.njit(parallel=True, fastmath=True)
+def convert_to_ultrametric(values):
+    """
+    Fix triangular inequality within distance matrix (values)
+    by converting to ultra-metric by ensuring the following
+    condition: d_{ij} = min(d_{ij}, max(d_{ik}, d_{kj}))
+
+    Parameters:
+    ------------
+    values: np.ndarray
+        2D square distance matrix.
+
+    Returns:
+    --------
+    np.ndarray
+        Ultrametrified distance matrix.
+    """
+    assert len(values.shape) == 2 and values.shape[0] == values.shape[1],\
+        "Values must be a 2D square matrix."
+    result = np.full(values.shape, 1.)
+    R = range(values.shape[0])
+    for i in nb.prange(values.shape[0]):
+        for j in range(i + 1, values.shape[0]):
+            tmp = values[i, j]
+            for k in R:
+                tmp = min(tmp, max(values[i, k], values[j, k]))
+            result[i, j] = tmp
+            # result[i, j] = np.min(np.append(
+            #     np.fmax(values[i, R], values[R, j]), values[i, j]))
+            result[j, i] = result[i, j]
+    return result
