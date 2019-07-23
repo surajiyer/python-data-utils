@@ -227,17 +227,10 @@ def convert_to_ultrametric(values):
     np.ndarray
         Ultrametrified distance matrix.
     """
-    assert len(values.shape) == 2 and values.shape[0] == values.shape[1],\
-        "Values must be a 2D square matrix."
+    values = np.atleast_2d(values)
     result = np.full(values.shape, 1.)
-    R = range(values.shape[0])
     for i in nb.prange(values.shape[0]):
         for j in range(i + 1, values.shape[0]):
-            tmp = values[i, j]
-            for k in R:
-                tmp = min(tmp, max(values[i, k], values[j, k]))
-            result[i, j] = tmp
-            # result[i, j] = np.min(np.append(
-            #     np.fmax(values[i, R], values[R, j]), values[i, j]))
-            result[j, i] = result[i, j]
+            result[i, j] = result[j, i] = min(np.min(
+                np.fmax(values[i], values[j])), values[i, j])
     return result

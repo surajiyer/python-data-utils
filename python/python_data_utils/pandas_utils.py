@@ -316,7 +316,7 @@ def pandas_to_tsv(df, save_file_path, index=False, mode='w', header=True):
               index=index, mode=mode, header=header)
 
 
-def list_column_to_mutliple_columns(s):
+def explode_binarize_horizontal(s):
     """
     Expands a single column containing variable-length lists
     to multiple binary columns.
@@ -345,6 +345,11 @@ def get_missingness_perc(df):
         [(len(df[c]) - df[c].count()) * 100.00 / len(df[c]) for c in df],
         index=df.columns, columns=['Missingness %'])
     return missingness
+
+
+def missingness_heatmap(df):
+    import seaborn as sns
+    return sns.heatmap(df.isnull(), cbar=False)
 
 
 def correlations_to_column(df, col, jupyter_nb=False):
@@ -662,11 +667,6 @@ def nullity_correlation(df, corr_method='spearman', jupyter_nb=False,
         return corr, w
 
     return corr
-
-
-def missingness_heatmap(df):
-    import seaborn as sns
-    return sns.heatmap(df.isnull(), cbar=False)
 
 
 def linearity_with_logodds(df, col, label_col, ax=None):
