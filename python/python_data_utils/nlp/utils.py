@@ -473,7 +473,6 @@ def cluster_urls(urls, min_cluster_size=10):
     clusters = urlclustering.cluster(urls, min_cluster_size)
     tmp = {v0: k[1] for k, v in clusters['clusters'].items() for v0 in v}
     tmp.update({k: k for k in clusters['unclustered']})
-    tmp.update({k: k for k in clusters['unclustered']})
     clusters = pd.DataFrame.from_dict(tmp, orient='index', columns=['cluster'])
     return clusters
 

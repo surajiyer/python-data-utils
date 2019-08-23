@@ -1,0 +1,13 @@
+# ignore .git and cache files
+.git
+.cache
+
+# ignore python artifacts
+.ipynb_checkpoints
+__pycache__
+
+# ignore log files
+*.log
+
+# ignore all readme or markdown files
+*.md
