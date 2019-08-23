@@ -9,15 +9,18 @@ patsy  # For R like linear formula generator
 fancyimpute  # Various data imputation functions
 statsmodels
 scikit-learn
-mord # Ordinal regression algorithms
-imbalanced-learn # ML algorithms for imbalanced datasets
+mord  # Ordinal regression algorithms
+imbalanced-learn  # ML algorithms for imbalanced datasets
 xgboost
 lightgbm
-distance # For various distance functions
+distance  # For various distance functions
 dill==0.2.8.2
 tqdm
 progressbar2==3.37.1
 hyperopt  # Bayesian optimization for hyper-parameter tuning
+pyarrow  # For reading parquet files
+fastparquet  # For reading parquet files
+urlclustering
 
 # Network-Analysis
 graphviz
