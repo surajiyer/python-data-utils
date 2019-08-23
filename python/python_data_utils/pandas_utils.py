@@ -316,10 +316,42 @@ def pandas_to_tsv(df, save_file_path, index=False, mode='w', header=True):
               index=index, mode=mode, header=header)
 
 
-def explode_binarize_horizontal(s):
+def explode_horizontal(s):
+    return s.apply(pd.Series)
+
+
+def explode_multiple(df, lst_cols, fill_value=''):
+    # make sure `lst_cols` is a list
+    if lst_cols and not isinstance(lst_cols, list):
+        lst_cols = [lst_cols]
+    # all columns except `lst_cols`
+    idx_cols = df.columns.difference(lst_cols)
+
+    # calculate lengths of lists
+    lens = df[lst_cols[0]].str.len()
+
+    if (lens > 0).all():
+        # ALL lists in cells aren't empty
+        return pd.DataFrame({
+            col: np.repeat(df[col].values, df[lst_cols[0]].str.len())
+            for col in idx_cols
+        }).assign(**{col: np.concatenate(df[col].values) for col in lst_cols}) \
+          .loc[:, df.columns]
+    else:
+        # at least one list in cells is empty
+        return pd.DataFrame({
+            col: np.repeat(df[col].values, df[lst_cols[0]].str.len())
+            for col in idx_cols
+        }).assign(**{col: np.concatenate(df[col].values) for col in lst_cols}) \
+          .append(df.loc[lens == 0, idx_cols]).fillna(fill_value) \
+          .loc[:, df.columns]
+
+
+def explode_horizontal_ohe(s):
     """
-    Expands a single column containing variable-length lists
-    to multiple binary columns.
+    Expands a column of lists to multiple one-hot
+    encoded columns per unique element from all
+    lists.
 
     :param s: pd.Series
         Series column of lists.
