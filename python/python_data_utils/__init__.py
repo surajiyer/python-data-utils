@@ -5,4 +5,4 @@
     author: Suraj Iyer
 """
 
-from . import decorators
+from . import decorators, cluster, nlp

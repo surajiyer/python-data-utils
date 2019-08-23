@@ -138,7 +138,7 @@ def multiview_ensemble_similarity(partitions, *similarity_matrices,
     pdm = pairwise_dissimilarity_matrix(partitions.values)
     if verbose:
         print(f"Time to run: {time.time() - start}")
-        print("Creating pairwise dissimilarity matrix.")
+        print("Creating affinity matrix.")
         start = time.time()
     afm_arr = []
     for sim_m in similarity_matrices:

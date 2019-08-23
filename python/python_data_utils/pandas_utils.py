@@ -611,23 +611,30 @@ def categorical_interaction_plot(df, col1, col2, by, figsize=(6, 6),
         colors=['red', 'blue'], markers=['D', '^'], ms=10, **plot_kwargs)
 
 
-def drop_duplicates_sorted(df, columns):
+def drop_duplicates_sorted(df, subset=None, sep='', inplace=True):
     '''
     Drop duplicate rows based on unique combination of vales from
     given columns. Combinations will be sorted on row axis before
     dropping duplicates.
 
     :param df: pd.DataFrame
-    :param columns: list of str
-        Keeps unique combinations of values across given columns
-        and drops remaining. Note that output will still include all
-        other columns.
+    :param subset: list of str
+        Subset of columns to drop duplicates from.
+    :param sep: str
+        Separator string for columns when sorting row values.
+    :param inplace: bool
+        Whether to drop duplicates in place or to return a copy
     :return df: pd.DataFrame with duplicates across all :columns: dropped.
     '''
-    df['check_string'] = df.apply(lambda row: ''.join(
-        sorted([row[c] for c in columns])), axis=1)
-    df = df.drop_duplicates('check_string')
-    return df.drop('check_string', axis=1)
+    if not inplace:
+        df = df.copy()
+    if subset is None:
+        subset = df.columns
+    df['check_string'] = df.apply(lambda row: sep.join(
+        sorted([f"{row[c]}" for c in subset])), axis=1)
+    df.drop_duplicates('check_string', inplace=True)
+    df.drop('check_string', axis=1, inplace=True)
+    return df
 
 
 def add_NA_indicator_variables(df, inplace=False):
