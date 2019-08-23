@@ -9,7 +9,7 @@ import numpy as np
 from sklearn.cluster import AffinityPropagation
 
 
-def affinity_propagation(items, similarity_matrix, item_id_included=False,
+def affinity_propagation(items, similarity_matrix,
                          verbose=True, **kwargs):
     """
     Create clusters with affinity propagation using
@@ -20,15 +20,14 @@ def affinity_propagation(items, similarity_matrix, item_id_included=False,
         "Clustering by passing messages between data points."
         science 315.5814 (2007): 972-976..
     """
-    assert isinstance(items, (list, tuple, np.ndarray)),\
-        'items must be an list, tuple or numpy array.'
+    try:
+        items_iterator = iter(items)
+        del items_iterator
+    except TypeError:
+        print('items must be an iterable.')
     assert isinstance(similarity_matrix, (list, tuple, np.ndarray))\
         and len(similarity_matrix) == len(similarity_matrix[0]),\
         'similarity_matrix must be square shape list, tuple or numpy array.'
-    assert isinstance(item_id_included, bool),\
-        'item_id_included must be a boolean.'
-    assert not item_id_included or \
-        (item_id_included and len(items[0]) == 2), 'item shape incorrect.'
 
     items = np.array(items)
     affprop = AffinityPropagation(affinity="precomputed", **kwargs)
@@ -36,13 +35,8 @@ def affinity_propagation(items, similarity_matrix, item_id_included=False,
     clusters = dict()
     for cluster_id in np.unique(affprop.labels_):
         exemplar = items[affprop.cluster_centers_indices_[cluster_id]]
-        if item_id_included:
-            exemplar = exemplar[0]
-            clusters[exemplar] = frozenset([idx for idx, _ in items[
-                np.flatnonzero(affprop.labels_ == cluster_id)]])
-        else:
-            clusters[exemplar] = frozenset([d for d in items[
-                np.flatnonzero(affprop.labels_ == cluster_id)]])
+        clusters[exemplar] = frozenset([d for d in items[
+            np.flatnonzero(affprop.labels_ == cluster_id)]])
         if verbose:
             print(" - *%s:* %s" % (
                 exemplar, ", ".join(str(d) for d in clusters[exemplar])))
@@ -56,8 +50,6 @@ def affinity_jaccard(items, verbose=True, **kwargs):
     :param items: list of tuples of type [(int, str),...]
         Each tuple in list of items is a pair of item id (int) and item (str).
     """
-    assert isinstance(items, (list, tuple, np.ndarray)),\
-        'items must be an list, tuple or numpy array.'
     assert isinstance(verbose, bool), 'verbose must be a boolean.'
 
     # Compute Jaccard similarity between items
@@ -65,15 +57,16 @@ def affinity_jaccard(items, verbose=True, **kwargs):
     from ..numpy_utils import create_symmetric_matrix
     items = [(idx, set(doc.split(" "))) for idx, doc in items]
     jaccard_similarity = [
-        0 if idx1 == idx2 else -1 * distance.jaccard(doc1, doc2)
-        for idx1, doc1 in items for idx2, doc2 in items if idx1 <= idx2]
+        1. if idx1 == idx2 else -1 * distance.jaccard(doc1[1], doc2[1])
+        for idx1, doc1 in enumerate(items)
+        for idx2, doc2 in enumerate(items) if idx1 <= idx2]
     jaccard_similarity = create_symmetric_matrix(jaccard_similarity)
-    items = [(idx, " ".join(item)) for idx, item in items]
+    items = [idx for idx, _ in items]
 
     # Create clusters with affinity propagation using
     # jaccard similarity between documents as input.
     return affinity_propagation(
-        items, jaccard_similarity, True, verbose, **kwargs)
+        items, jaccard_similarity, verbose, **kwargs)
 
 
 def affinity_ujaccard(items, depth=3, n_jobs=1, verbose=True, **kwargs):
@@ -84,8 +77,6 @@ def affinity_ujaccard(items, depth=3, n_jobs=1, verbose=True, **kwargs):
     :param items: list of tuples of type [(int, str),...]
         Each tuple in list of items is a pair of item id (int) and item (str).
     """
-    assert isinstance(items, (list, tuple, np.ndarray)),\
-        'items must be an list, tuple or numpy array.'
     assert isinstance(depth, int) and depth > 0,\
         'depth must be a non-zero integer.'
     assert isinstance(verbose, bool), 'verbose must be a boolean.'
@@ -95,4 +86,4 @@ def affinity_ujaccard(items, depth=3, n_jobs=1, verbose=True, **kwargs):
     uJaccard_similarity = ujaccard_similarity_score(
         [set(doc.split(" ")) for _, doc in items], depth=depth, n_jobs=n_jobs)
     return affinity_propagation(
-        items, uJaccard_similarity, True, verbose, **kwargs)
+        [idx for idx, _ in items], uJaccard_similarity, verbose, **kwargs)
