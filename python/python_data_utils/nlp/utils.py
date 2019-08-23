@@ -403,6 +403,81 @@ def replace_contractions(text, cDict=english_contractions):
     return c_re.sub(replace, text)
 
 
+def KNNNameMatching(A, B, vectorizer_kws={}, nn_kws={}, max_distance=None,
+                    return_B=True):
+    """
+    Nearest neighbor name matching of sentences in B to A.
+    """
+    from sklearn.neighbors import NearestNeighbors
+    from sklearn.feature_extraction.text import TfidfVectorizer
+
+    # vectorize the B documents after fitting on A
+    vectorizer = TfidfVectorizer(**vectorizer_kws)
+    Xa = vectorizer.fit_transform(A)
+    Xb = vectorizer.transform(B)
+
+    # find nearest neighbor matching
+    neigh = NearestNeighbors(n_neighbors=1, **nn_kws)
+    neigh.fit(Xa)
+    if max_distance is None:
+        indices = neigh.kneighbors(Xb, return_distance=False).flatten()
+    else:
+        indices, distances = neigh.kneighbors(Xb)
+        indices, distances = indices.flatten(), distances.flatten()
+        indices = indices[distance <= max_distance]
+
+    if return_B:
+        result = [(B[i], A[idx]) for i, idx in enumerate(indices)]
+    else:
+        result = [A[idx] for idx in indices]
+
+    return result
+
+
+def bigram_context(documents, window_size=2, unique=False, sort=True):
+    """
+    Get bigram context (word pairs) within given window size
+    from given documents
+    """
+    words = []
+    for d in documents:
+        words.extend(d)
+        words.extend(["|"] * (window_size - 1))
+    finder = nltk.collocations.BigramCollocationFinder\
+        .from_words(words, window_size=window_size)
+    finder.apply_ngram_filter(lambda *w: "|" in w)
+    df = pd.DataFrame(finder.ngram_fd.items(), columns=["pair", "count"])
+    df[["left", "right"]] = df['pair'].apply(pd.Series)
+    df.drop("pair", axis=1, inplace=True)
+    if unique:
+        df.loc[df.left >= df.right, ['left', 'right']] =\
+            df.loc[df.left >= df.right, ['right', 'left']].values
+        df = df.groupby(['left', 'right'])['count'].sum().reset_index()
+    if sort:
+        df.sort_values("count", ascending=False, inplace=True)
+        df.reset_index(drop=True, inplace=True)
+    return df
+
+
+def cluster_urls(urls, min_cluster_size=10):
+    """
+    Cluster URLs by regex rules defined in this package:
+    https://pypi.org/project/urlclustering/
+
+    urls: list
+        List of urls.
+    min_clustre_size: int
+        Minimum cluster size
+    """
+    import urlclustering
+    clusters = urlclustering.cluster(urls, min_cluster_size)
+    tmp = {v0: k[1] for k, v in clusters['clusters'].items() for v0 in v}
+    tmp.update({k: k for k in clusters['unclustered']})
+    tmp.update({k: k for k in clusters['unclustered']})
+    clusters = pd.DataFrame.from_dict(tmp, orient='index', columns=['cluster'])
+    return clusters
+
+
 class RegexPattern:
     WholeWordOnly = lambda w: r'\b{}\b'.format(w)
     Linebreak = r'\r+|\n+'
@@ -421,3 +496,4 @@ class RegexPattern:
     Copyright = r"\(c\)|®|©|™"
     ThreePlusRepeatingCharacters = r"([a-z])\1{2,}"
     ApostropheWords = r"[\w]+['][\w]+(['][\w]+)?"
+    MD5 = r"[a-fA-F0-9]{32}"
