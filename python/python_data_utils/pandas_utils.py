@@ -797,13 +797,13 @@ def get_age_from_dob(s, round=True):
 
 def insert_column(df, column_name, column, after_column=None,
                   before_column=None):
-    if after_column:
+    if (column_name in df.columns) or (not after_column and not before_column):
+        df[column_name] = column
+        return df
+    elif after_column:
         idx = int((df.columns == after_column).nonzero()[0][0]) + 1
     elif before_column:
         idx = int((df.columns == before_column).nonzero()[0][0])
-    else:
-        df[column_name] = column
-        return df
     df.insert(idx, column_name, column)
     return df
 
