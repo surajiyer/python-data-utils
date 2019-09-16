@@ -374,6 +374,7 @@ def correct_word_compounding(dfs, language_dictionary,
 
 def tf_idf(documents):
     N = len(documents)
+    assert N > 0, "Count of documents must be at least 1."
     corpus = " ".join(documents)
     corpus_deduplicated = " ".join(
         [" ".join(frozenset(d.split(" "))) for d in documents])
@@ -471,9 +472,9 @@ def cluster_urls(urls, min_cluster_size=10):
     """
     import urlclustering
     clusters = urlclustering.cluster(urls, min_cluster_size)
-    tmp = {v0: k[1] for k, v in clusters['clusters'].items() for v0 in v}
-    tmp.update({k: k for k in clusters['unclustered']})
-    clusters = pd.DataFrame.from_dict(tmp, orient='index', columns=['cluster'])
+    tmp = {v0: [k[1], 0] for k, v in clusters['clusters'].items() for v0 in v}
+    tmp.update({k: [k, 1] for k in clusters['unclustered']})
+    clusters = pd.DataFrame.from_dict(tmp, orient='index', columns=['cluster', 'unclustered'])
     return clusters
 
 
