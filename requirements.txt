@@ -30,6 +30,8 @@ graphviz
 matplotlib==3.0.3
 seaborn==0.9.0
 plotly
+dash
+dash-daq
 
 # Jupyter-Notebook
 jupyterlab
