@@ -15,6 +15,9 @@ import pandas as pd
 from .contractions import *
 
 
+DATA_DIR = join(dirname(__file__), 'data')
+
+
 def words(text):
     return re.findall(r'\w+', text.lower())
 
@@ -46,10 +49,6 @@ def create_trie_dictionary(corpus=None, file_path=None):
     return model
 
 
-def words_data_folder_path(lang='en'):
-    return join(dirname(__file__), 'data', 'dictionaries', lang)
-
-
 def words_dictionary_filepath(lang='en', size='50k'):
     """
         lang: str, default='en'
@@ -59,7 +58,8 @@ def words_dictionary_filepath(lang='en', size='50k'):
             words or 'full' dictionary. Full dictionary is very large
             and can result in large running times.
     """
-    return join(words_data_folder_path(lang), '{}_{}.txt'.format(lang, size))
+    return join(
+        DATA_DIR, 'dictionaries', lang, '{}_{}.txt'.format(lang, size))
 
 
 def words_dictionary_trie_filepath(lang='en', size='50k'):
@@ -71,7 +71,8 @@ def words_dictionary_trie_filepath(lang='en', size='50k'):
             words or 'full' dictionary. Full dictionary is very large
             and can result in large running times.
     """
-    return join(words_data_folder_path(lang), '{}_{}_trie'.format(lang, size))
+    return join(
+        DATA_DIR, 'dictionaries', lang, '{}_{}_trie'.format(lang, size))
 
 
 def words_set_dictionary(lang='en', size='50k'):
