@@ -475,8 +475,68 @@ def cluster_urls(urls, min_cluster_size=10):
     clusters = urlclustering.cluster(urls, min_cluster_size)
     tmp = {v0: [k[1], 0] for k, v in clusters['clusters'].items() for v0 in v}
     tmp.update({k: [k, 1] for k in clusters['unclustered']})
-    clusters = pd.DataFrame.from_dict(tmp, orient='index', columns=['cluster', 'unclustered'])
+    clusters = pd.DataFrame.from_dict(
+        tmp, orient='index', columns=['cluster', 'unclustered'])
     return clusters
+
+
+def corpus_level_tfidf(texts, **vectorizer_kwargs):
+    """
+    See book: Ziegler, C.N., 2012. Mining for strategic competitive
+    intelligence. Springer. pp. 128-130.
+    """
+    assert isinstance(texts, pd.Series), "texts must be a pandas Series."
+    from sklearn.feature_extraction.text import CountVectorizer
+
+    with np.errstate(divide='ignore'):
+        # Compute 1 + log(tf+(t_i)) where tf+ computes the summmed term
+        # frequency for term t_i and t_i occurs in some text `d` \in texts.
+        tf_vect = CountVectorizer(**vectorizer_kwargs)
+        tf = np.array(
+            tf_vect.fit_transform([texts.str.cat(sep=" ")]).sum(0)
+        ).reshape(-1)
+        tf = (tf > 0).astype(float) + np.log(tf, where=tf > 0)
+
+        # Get the order of the terms in the tf_vect
+        terms = tf_vect.get_feature_names()
+
+        # Compute log(|texts| / df(t_i)) where df computes the document
+        # frequency of t_i in texts.
+        vectorizer_kwargs.pop('vocabulary', None)
+        vectorizer_kwargs.pop('binary', None)
+        idf_vect = CountVectorizer(
+            binary=True, vocabulary=terms, **vectorizer_kwargs)
+        idf = np.array(np.log(
+            texts.shape[0] / (1. + idf_vect.fit_transform(texts).sum(0))
+        )).reshape(-1)
+        return tf * idf, terms
+
+
+def foreground_keywords_extraction(D_f, D_b, **vectorizer_kwargs):
+    """
+    Keyphrase extraction by contrasting foreground and background
+    aggregated tf-idf weights of terms to enable context awareness.
+
+    See paper: Ziegler, C.N., Skubacz, M. and Viermetz, M., 2008, December.
+    Mining and exploring unstructured customer feedback data using language
+    models and treemap visualizations. In 2008 IEEE/WIC/ACM International
+    Conference on Web Intelligence and Intelligent Agent Technology (Vol. 1,
+    pp. 932-937). http://www2.informatik.uni-freiburg.de/~cziegler/papers/WI-08-CR.pdf
+    """
+    weights_f, terms_f = corpus_level_tfidf(D_f, **vectorizer_kwargs)
+    vectorizer_kwargs.update({'vocabulary': terms_f})
+    weights_b, _ = corpus_level_tfidf(D_b, **vectorizer_kwargs)
+    W = (weights_f / weights_b) * np.log(weights_f + weights_b)
+
+    # if a term occurs in the foreground corpus but not in the background,
+    # then the term weight becomes +infinity. This does not give useful
+    # information about how to order the terms based on their importance,
+    # so we fall back to using its foreground weights only in this case.
+    mask = np.isposinf(W)
+    W[mask] = weights_f[mask]
+
+    # print('\n'.join([str(x) for x in list(zip(terms_f, W))]))
+    return np.array(terms_f)[np.argsort(-W)]
 
 
 class RegexPattern:
