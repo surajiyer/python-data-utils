@@ -1,7 +1,7 @@
 # coding: utf-8
 
 """
-    description: Affinity propagation based clustering algorithm
+    description: Affinity propagation clustering algorithm
     author: Suraj Iyer
 """
 
@@ -9,8 +9,8 @@ import numpy as np
 from sklearn.cluster import AffinityPropagation
 
 
-def affinity_propagation(items, similarity_matrix,
-                         verbose=True, **kwargs):
+def ap_precomputed(items, similarity_matrix,
+                   verbose=True, **kwargs):
     """
     Create clusters with affinity propagation using
     given similarity matrix between items as input.
@@ -30,20 +30,20 @@ def affinity_propagation(items, similarity_matrix,
         'similarity_matrix must be square shape list, tuple or numpy array.'
 
     items = np.array(items)
-    affprop = AffinityPropagation(affinity="precomputed", **kwargs)
-    affprop.fit(similarity_matrix)
+    clusterer = AffinityPropagation(affinity="precomputed", **kwargs)
+    clusterer.fit(similarity_matrix)
     clusters = dict()
-    for cluster_id in np.unique(affprop.labels_):
-        exemplar = items[affprop.cluster_centers_indices_[cluster_id]]
+    for cluster_id in np.unique(clusterer.labels_):
+        exemplar = items[clusterer.cluster_centers_indices_[cluster_id]]
         clusters[exemplar] = frozenset([d for d in items[
-            np.flatnonzero(affprop.labels_ == cluster_id)]])
+            np.flatnonzero(clusterer.labels_ == cluster_id)]])
         if verbose:
             print(" - *%s:* %s" % (
                 exemplar, ", ".join(str(d) for d in clusters[exemplar])))
     return clusters
 
 
-def affinity_jaccard(items, verbose=True, **kwargs):
+def ap_jaccard(items, verbose=True, **kwargs):
     """
     Cluster items with affinity propagation based on Jaccard similarity scores.
 
@@ -65,11 +65,11 @@ def affinity_jaccard(items, verbose=True, **kwargs):
 
     # Create clusters with affinity propagation using
     # jaccard similarity between documents as input.
-    return affinity_propagation(
+    return ap_precomputed(
         items, jaccard_similarity, verbose, **kwargs)
 
 
-def affinity_ujaccard(items, depth=3, n_jobs=1, verbose=True, **kwargs):
+def ap_ujaccard(items, depth=3, n_jobs=1, verbose=True, **kwargs):
     """
     Cluster text documents with affinity propagation
     based on Unilateral Jaccard similarity scores.
@@ -85,5 +85,5 @@ def affinity_ujaccard(items, depth=3, n_jobs=1, verbose=True, **kwargs):
     from .unilateral_jaccard import ujaccard_similarity_score
     uJaccard_similarity = ujaccard_similarity_score(
         [set(doc.split(" ")) for _, doc in items], depth=depth, n_jobs=n_jobs)
-    return affinity_propagation(
+    return ap_precomputed(
         [idx for idx, _ in items], uJaccard_similarity, verbose, **kwargs)
