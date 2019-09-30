@@ -5,17 +5,17 @@
     author: Suraj Iyer
 """
 
-import re
-from .trie import *
-from collections import Counter
-from os.path import dirname, join
 import numpy as np
-import nltk
 import pandas as pd
+import re
+from collections import Counter
+import nltk
+from .trie import *
 from .contractions import *
-
+from os.path import dirname, join
 
 DATA_DIR = join(dirname(__file__), 'data')
+DICTIONARIES_PATH = lambda lang: join(DATA_DIR, 'dictionaries', lang)
 
 
 def words(text):
@@ -489,12 +489,12 @@ def corpus_level_tfidf(texts, **vectorizer_kwargs):
     from sklearn.feature_extraction.text import CountVectorizer
 
     with np.errstate(divide='ignore'):
-        # Compute 1 + log(tf+(t_i)) where tf+ computes the summmed term
+        # Compute 1 + log(tf+(t_i)) where tf+ computes the summed term
         # frequency for term t_i and t_i occurs in some text `d` \in texts.
+        vectorizer_kwargs.pop('min_df', None)
+        vectorizer_kwargs.pop('max_df', None)
         tf_vect = CountVectorizer(**vectorizer_kwargs)
-        tf = np.array(
-            tf_vect.fit_transform([texts.str.cat(sep=" ")]).sum(0)
-        ).reshape(-1)
+        tf = np.array(tf_vect.fit_transform(texts).sum(0)).reshape(-1)
         tf = (tf > 0).astype(float) + np.log(tf, where=tf > 0)
 
         # Get the order of the terms in the tf_vect

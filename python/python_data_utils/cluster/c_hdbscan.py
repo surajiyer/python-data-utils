@@ -27,8 +27,9 @@ def hdbscan_precomputed(items, similarity_matrix,
         'similarity_matrix must be square shape list, tuple or numpy array.'
 
     items = np.array(items)
-    clusterer = hdbscan.HDBSCAN(**kwargs)
-    clusterer.fit(similarity_matrix)
+    kwargs.pop('metric', None)
+    clusterer = hdbscan.HDBSCAN(metric='precomputed', **kwargs)
+    clusterer.fit(-similarity_matrix)
     clusters = dict()
     for cluster_id in np.unique(clusterer.labels_):
         mask = np.flatnonzero(clusterer.labels_ == cluster_id)
