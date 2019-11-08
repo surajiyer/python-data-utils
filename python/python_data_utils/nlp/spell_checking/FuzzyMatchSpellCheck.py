@@ -7,19 +7,25 @@
     URL: https://github.com/pragnakalp/spellcheck-using-dictionary-in-python.
 """
 
+__all__ = ['FuzzyMatchSpellCheck']
+
 from fuzzywuzzy import fuzz
+from typing import Iterable
 
 
 class FuzzyMatchSpellCheck:
 
     # initialization method
-    def __init__(self, words_list):
+    def __init__(self, words_list: Iterable[str]):
         # store all the words into a class variable dictionary
         self.dictionary = words_list
 
-    # this method returns the possible suggestions of the correct words
-    def suggestions(self, text, delimiter=" ", threshold=75):
-        # store the words of the string to be checked in a list by using a split function
+    def suggestions(
+            self, text: str, delimiter: str = " ", threshold: float = 75):
+        """Returns the possible suggestions of the correct words."""
+
+        # store the words of the string to be checked in a list by
+        # using a split function
         string_words = text.split(delimiter)
 
         # a list to store all the possible suggestions
@@ -31,18 +37,23 @@ class FuzzyMatchSpellCheck:
             # loop over words in the dictionary
             for name in self.dictionary:
 
-                # if the fuzzywuzzy returns the matched value greater than threshold
-                if fuzz.ratio(string_words[i].lower(), name.lower()) >= threshold:
+                # calculate the match probability
+                percent = fuzz.ratio(string_words[i].lower(), name.lower())
 
+                # if the fuzzywuzzy returns the matched value
+                # greater than threshold
+                if percent >= threshold:
                     # append the dict word to the suggestion list
                     suggestions.append(name)
 
         # return the suggestions list
         return suggestions
 
-    # this method returns the corrected string of the given input
-    def correct(self, text, delimiter=" ", threshold=75):
-        # store the words of the string to be checked in a list by using a split function
+    def correct(self, text: str, delimiter: str = " ", threshold: float = 75):
+        """Returns the corrected string of the given input."""
+
+        # store the words of the string to be checked in a list by
+        # using a split function
         string_words = text.split(delimiter)
 
         # loop over the number of words in the string to be checked
@@ -57,13 +68,15 @@ class FuzzyMatchSpellCheck:
                 # calculate the match probability
                 percent = fuzz.ratio(string_words[i].lower(), name.lower())
 
-                # if fuzzywuzzy returns the matched value greater than threshold
+                # if fuzzywuzzy returns the matched value
+                # greater than threshold
                 if percent >= threshold:
 
                     # if the matched probability is
                     if percent > max_percent:
 
-                        # change the original value with the corrected matched value
+                        # change the original value with the corrected
+                        # matched value
                         string_words[i] = name
 
                     # change the max percent to the current matched percent

@@ -6,6 +6,8 @@
     author: Suraj Iyer
 """
 
+__all__ = ['ujaccard_similarity_score']
+
 import numpy as np
 from collections import deque
 import time
@@ -13,8 +15,9 @@ import itertools as it
 import multiprocessing as mp
 
 
-def dfs_paths_recursive(graph: dict, start, goal, depth: int,
-                        visited: set=set(), n_paths: int=0) -> int:
+def dfs_paths_recursive(
+        graph: dict, start, goal, depth: int,
+        visited: set=set(), n_paths: int=0) -> int:
     """
     Depth-first search until given depth for finding all paths
     between start and goal vertex on given graph.

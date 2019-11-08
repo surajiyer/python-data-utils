@@ -5,12 +5,17 @@
     author: Suraj Iyer
 """
 
+__all__ = [
+    'ap_precomputed',
+    'ap_jaccard',
+    'ap_ujaccard']
+
 import numpy as np
 from sklearn.cluster import AffinityPropagation
 
 
-def ap_precomputed(items, similarity_matrix,
-                   verbose=True, **kwargs):
+def ap_precomputed(
+        items, similarity_matrix, verbose=True, **kwargs):
     """
     Create clusters with affinity propagation using
     given similarity matrix between items as input.

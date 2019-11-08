@@ -5,4 +5,4 @@
     author: Suraj Iyer
 """
 
-from . import pandas
+from . import _pandas

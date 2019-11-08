@@ -7,13 +7,15 @@
     URL: http://github.com/noahcoad/google-spell-check.
 """
 
+__all__ = ['GoogleSpellCheck']
+
 import urllib
 import re
 import html
 
 
 class GoogleSpellCheck:
-    def correct(self, text):
+    def correct(self, text: str) -> str:
         # grab html
         page = self.get_page('http://www.google.com/search?hl=en&q=' + urllib.parse.quote(text) + "&meta=&gws_rd=ssl")
 
@@ -32,7 +34,7 @@ class GoogleSpellCheck:
         # return result
         return fix
 
-    def get_page(self, url):
+    def get_page(self, url: str) -> str:
         # the type of header affects the type of response google returns
         # for example, using the commented out header below google does not
         # include "Including results for" results and gives back a different set of results

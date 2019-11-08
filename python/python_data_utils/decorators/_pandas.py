@@ -5,12 +5,14 @@
     author: Suraj Iyer
 """
 
+__package__ = "python_data_utils.decorators"
+
 from pandas import DataFrame, Series
-from .. import pandas_utils as pdu
+from ..pandas import utils as pdu
 import os.path as path
 
 
-with open(path.join(path.dirname(__file__), "..", "pandas_utils.py")) as f:
+with open(path.join(path.dirname(__file__), "..", "pandas", "utils.py")) as f:
     f = f.readlines()
 
     # Find function names which takes "df" as first input

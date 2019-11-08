@@ -8,7 +8,9 @@
     author: Suraj Iyer
 """
 
-from sklearn.base import ClassifierMixin, BaseEstimator
+__all__ = ['GibberishDetectorClassifier']
+
+from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils.validation import check_is_fitted
 import numpy as np
 

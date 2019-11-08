@@ -5,6 +5,24 @@
     author: Suraj Iyer
 """
 
+__all__ = [
+    'create_upper_matrix',
+    'symmetrize',
+    'create_symmetric_matrix',
+    'pairwise_difference',
+    'is_pos_def',
+    'rowwise_dissimilarity',
+    'rowwise_cosine_similarity',
+    'filter_rows_with_unique_values_only',
+    'unique_per_row',
+    'drop_duplicates',
+    'permutations_with_replacement',
+    'permutations',
+    'combinations_with_replacement',
+    'combinations',
+    'convert_to_ultrametric'
+]
+
 import numpy as np
 import warnings
 

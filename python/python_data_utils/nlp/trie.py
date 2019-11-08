@@ -6,6 +6,8 @@
         author: Suraj Iyer
 """
 
+__all__ = ['Trie']
+
 from collections.abc import MutableMapping
 import dill
 import json

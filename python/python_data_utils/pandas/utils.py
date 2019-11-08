@@ -5,12 +5,52 @@
     author: Suraj Iyer
 """
 
-from __future__ import print_function
+__all__ = [
+    'df_mem_usage',
+    'optimize_dataframe',
+    'tsv_to_pandas_generator',
+    'tsv_to_pandas',
+    'pandas_to_tsv',
+    'explode_horizontal',
+    'explode_multiple',
+    'explode_horizontal_ohe',
+    'get_missingness',
+    'get_missingness_perc',
+    'missingness_heatmap',
+    'correlations_to_column',
+    'feature_corr_matrix',
+    'feature_corr_matrix_compact',
+    'feature_corr_matrix_sns',
+    'np_to_pd',
+    'balanced_sampling',
+    'feature_distributions_hist',
+    'feature_distributions_boxplot',
+    'feature_class_relationship',
+    'feature_feature_relationship',
+    'feature_feature_relationship_one',
+    'categorical_interaction_plot',
+    'drop_duplicates_sorted',
+    'add_NA_indicator_variables',
+    'nullity_correlation',
+    'linearity_with_logodds',
+    'linearity_with_logodds_allcols',
+    'filter_columns',
+    'drop_constant_columns',
+    'keep_top_k_categories',
+    'df_value_counts',
+    'reorder_columns',
+    'get_age_from_dob',
+    'insert_column',
+    'get_current_datetime_str',
+    'feature_select_correlation',
+    'mahalanobis_distance',
+    'outlier_detection_mahalanobis',
+    'save_xls'
+]
 
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import six
 # from imblearn.over_sampling import smote
 
 plt.style.use('seaborn')  # pretty matplotlib plots
@@ -135,8 +175,8 @@ def tsv_to_pandas_generator(file_path, target_label=None, chunksize=None):
         y: pd.Series
             included if target label is given
     """
-    assert isinstance(file_path, six.string_types) and len(file_path) > 0
-    assert target_label is None or isinstance(target_label, six.string_types)
+    assert isinstance(file_path, str) and len(file_path) > 0
+    assert target_label is None or isinstance(target_label, str)
     assert isinstance(chunksize, int)
 
     for chunk in pd.read_csv(
@@ -173,8 +213,8 @@ def tsv_to_pandas(file_path, target_label=None, memory_optimize=True,
         y: pd.Series
             included if target label is given
     """
-    assert isinstance(file_path, six.string_types) and len(file_path) > 0
-    assert target_label is None or isinstance(target_label, six.string_types)
+    assert isinstance(file_path, str) and len(file_path) > 0
+    assert target_label is None or isinstance(target_label, str)
     import dill
     import os
 
@@ -253,7 +293,7 @@ def tsv_to_pandas(file_path, target_label=None, memory_optimize=True,
 
     # save the final result
     if save_pickle_obj:
-        if isinstance(save_pickle_obj, six.string_types):
+        if isinstance(save_pickle_obj, str):
             save_path = save_pickle_obj
 
             # make the save directory
@@ -296,11 +336,11 @@ def pandas_to_tsv(df, save_file_path, index=False, mode='w', header=True):
     :param header: bool
         write the column names to output.
     """
-    assert isinstance(save_file_path, six.string_types) and\
+    assert isinstance(save_file_path, str) and\
         len(save_file_path) > 0
     assert isinstance(df, pd.DataFrame) and not df.empty,\
         'df must be a non-empty pd.DataFrame'
-    assert isinstance(mode, six.string_types)
+    assert isinstance(mode, str)
 
     # make a new directory to save the file
     try:
@@ -335,14 +375,14 @@ def explode_multiple(df, lst_cols, fill_value=''):
         return pd.DataFrame({
             col: np.repeat(df[col].values, df[lst_cols[0]].str.len())
             for col in idx_cols
-        }).assign(**{col: np.concatenate(df[col].values) for col in lst_cols}) \
+        }).assign(**{col: np.concatenate(df[col].values) for col in lst_cols})\
           .loc[:, df.columns]
     else:
         # at least one list in cells is empty
         return pd.DataFrame({
             col: np.repeat(df[col].values, df[lst_cols[0]].str.len())
             for col in idx_cols
-        }).assign(**{col: np.concatenate(df[col].values) for col in lst_cols}) \
+        }).assign(**{col: np.concatenate(df[col].values) for col in lst_cols})\
           .append(df.loc[lens == 0, idx_cols]).fillna(fill_value) \
           .loc[:, df.columns]
 
@@ -463,17 +503,20 @@ def feature_corr_matrix_compact(df, method="spearman"):
     return fig
 
 
-def feature_corr_matrix_sns(df, method="spearman", upsidedown=False):
+def feature_corr_matrix_sns(
+        df, method="spearman", annot=True, presentation=False):
     corr = df.corr(method=method)
+    import matplotlib as mpl
 
-    # Generate a mask for the upper triangle
-    if not upsidedown:
-        mask = np.ones_like(corr, dtype=np.bool)
-        mask[np.triu_indices_from(mask)] = False
-    else:
+    mask = np.zeros_like(corr, dtype=np.bool)
+    if presentation:
         # Generate a mask for the lower triangle
-        mask = np.zeros_like(corr, dtype=np.bool)
+        # mask[np.tril_indices_from(mask)] = True
         mask[np.triu_indices_from(mask)] = True
+    else:
+        # Generate a mask for the upper triangle
+        mask[np.triu_indices_from(mask)] = True
+    mask = np.invert(mask)
 
     # Set up the matplotlib figure
     f, ax = plt.subplots(figsize=(11, 9))
@@ -483,14 +526,33 @@ def feature_corr_matrix_sns(df, method="spearman", upsidedown=False):
     cmap = sns.diverging_palette(220, 10, as_cmap=True)
 
     # Draw the heatmap with the mask and correct aspect ratio
-    x = sns.heatmap(corr, mask=mask, cmap=cmap, center=0, ax=ax,
-                    square=True, linewidths=.5, cbar_kws={"shrink": .5})
+    ax = sns.heatmap(
+        corr, mask=mask, cmap=cmap, center=0, ax=ax, annot=annot,
+        square=True, linewidths=.5, cbar_kws={
+            "shrink": .5,
+            "orientation": "horizontal" if presentation else "vertical"})
 
-    if upsidedown:
-        for i, t in enumerate(ax.get_yticklabels()):
-            t.set_rotation(180)
+    if presentation:
+        # TODO: still needs fixing
+        ax.yaxis.tick_right()
+        ax.xaxis.tick_top()
+        r = mpl.transforms.Affine2D().translate(-3, -3) + mpl.transforms.Affine2D().rotate_deg(-45) + mpl.transforms.Affine2D().translate(3, 2.3)
+        trans = ax.transData
+        for t in ax.get_yticklabels():
+            t.set_rotation(-45)
+            t.set(va="top")
+        for t in ax.get_xticklabels():
+            t.set_rotation(-45)
+            t.set(ha="right")
+        print(plt.xlim(), plt.ylim())
+        ax.collections[-1].colorbar.set_visible(False)
+        for t in ax.get_children():
+            print(type(t))
+            if isinstance(t, mpl.patches.Rectangle):
+                t.set_visible(False)
 
-    return x
+    # plt.tight_layout()
+    return ax
 
 
 def np_to_pd(X, columns=None):
@@ -581,8 +643,8 @@ def feature_feature_relationship(df, figsize=(20, 20)):
 
 
 def feature_feature_relationship_one(df, cols, by=lambda x: True):
-    assert 1 < len(
-        cols) <= 3, 'Number of columns must equal 2 or 3 dimensions.'
+    assert 1 < len(cols) <= 3,\
+        'Number of columns must equal 2 or 3 dimensions.'
     i = 0
     colors = list('rbgym')
     fig = plt.figure()

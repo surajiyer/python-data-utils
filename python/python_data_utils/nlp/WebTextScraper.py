@@ -5,6 +5,8 @@
         author: Suraj Iyer
 """
 
+__all__ = ['WebTextScraper']
+
 from bs4 import BeautifulSoup
 from bs4.element import Comment
 import requests
@@ -49,14 +51,21 @@ class WebTextScraper:
         soup = BeautifulSoup(body, 'html.parser')
         texts = soup.findAll(text=True)
         visible_texts = filter(self.tag_visible, texts)
-        return u" ".join(t.strip() for t in visible_texts).strip(), visible_texts
+        return u" ".join(t.strip() for t in visible_texts).strip(),\
+            visible_texts
 
-    def text_from_url(self, url, timeout=5, cache_it=True, user_agent=None, ignore_errors=True):
+    def text_from_url(
+            self, url, timeout=5, cache_it=True, user_agent=None,
+            ignore_errors=True):
         if url in self.__cache:
             return self.text_from_html(self.__cache[url])
 
-        page_response = requests.get(url, headers={'User-Agent': user_agent if user_agent else self.__user_agent}, timeout=timeout)
-        if page_response.status_code.real >= 200 and page_response.status_code.real < 300:
+        page_response = requests.get(
+            url, timeout=timeout,
+            headers={
+                'User-Agent': user_agent if user_agent else self.__user_agent})
+        if page_response.status_code.real >= 200\
+                and page_response.status_code.real < 300:
             text = self.text_from_html(page_response.content)
 
             if cache_it and url not in self.__cache:
@@ -82,15 +91,21 @@ class WebTextScraper:
             'javascript') or url.startswith('mailto')}  # Remove id references
         return urls
 
-    def urls_from_url(self, url, timeout=5, cache_it=True, user_agent=None, ignore_errors=True):
+    def urls_from_url(
+            self, url, timeout=5, cache_it=True, user_agent=None,
+            ignore_errors=True):
         if url in self.__cache:
             urls = self.urls_from_html(self.__cache[url])
             urls = {
                 url + link if link.startswith('/') else link for link in urls}
             return urls
 
-        page_response = requests.get(url, headers={'User-Agent': user_agent if user_agent else self.__user_agent}, timeout=timeout)
-        if page_response.status_code.real >= 200 and page_response.status_code.real < 300:
+        page_response = requests.get(
+            url, timeout=timeout,
+            headers={
+                'User-Agent': user_agent if user_agent else self.__user_agent})
+        if page_response.status_code.real >= 200\
+                and page_response.status_code.real < 300:
             urls = self.urls_from_html(page_response.content)
             urls = {
                 url + link if link.startswith('/') else link for link in urls}
@@ -108,7 +123,9 @@ class WebTextScraper:
 
         return urls
 
-    def scrape_text(self, start_url, search_depth=2, allowed_domains=[], user_agent=None, ignore_errors=True):
+    def scrape_text(
+            self, start_url, search_depth=2, allowed_domains=[],
+            user_agent=None, ignore_errors=True):
         assert search_depth > -1, 'Search depth must be >= 0.'
         current_depth = 0
         to_visit = set(start_url)
@@ -116,13 +133,16 @@ class WebTextScraper:
 
         while to_visit:
             for url in list(to_visit):
-                yield self.text_from_url(url, user_agent=user_agent, ignore_errors=ignore_errors)
+                yield self.text_from_url(
+                    url, user_agent=user_agent, ignore_errors=ignore_errors)
 
                 visited.add(url)
                 to_visit.remove(url)
 
                 if current_depth < search_depth:
-                    urls = self.urls_from_url(url, user_agent=user_agent, ignore_errors=ignore_errors)
+                    urls = self.urls_from_url(
+                        url, user_agent=user_agent,
+                        ignore_errors=ignore_errors)
                     if not allowed_domains:
                         to_visit.add(
                             set(url for url in urls if url not in visited))

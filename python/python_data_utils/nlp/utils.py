@@ -5,6 +5,37 @@
     author: Suraj Iyer
 """
 
+__all__ = [
+    'words',
+    'create_dictionary',
+    'create_dictionary_from_csv',
+    'create_trie_dictionary',
+    'words_dictionary_filepath',
+    'words_dictionary_trie_filepath',
+    'words_set_dictionary',
+    'words_trie_dictionary',
+    'cleanhtml',
+    'reduce_lengthening',
+    'edits_1',
+    'edits_2',
+    '_edit_dist',
+    'edit_dist',
+    'cluster_words_by_edit_distance1',
+    'cluster_words_by_edit_distance2',
+    'count_words',
+    'join_bigrams_with_replacements',
+    'correct_word_compounding',
+    'tf_idf',
+    'replace_contractions',
+    'replace',
+    'KNNNameMatching',
+    'bigram_context',
+    'cluster_urls',
+    'corpus_level_tfidf',
+    'foreground_keywords_extraction',
+    'RegexPattern'
+]
+
 import numpy as np
 import pandas as pd
 import re
@@ -13,16 +44,18 @@ import nltk
 from .trie import *
 from .contractions import *
 from os.path import dirname, join
+from typing import Iterable, Tuple
 
 DATA_DIR = join(dirname(__file__), 'data')
 DICTIONARIES_PATH = lambda lang: join(DATA_DIR, 'dictionaries', lang)
 
 
-def words(text):
+def words(text: str) -> str:
     return re.findall(r'\w+', text.lower())
 
 
-def create_dictionary(corpus=None, file_path=None):
+def create_dictionary(
+        corpus: str = None, file_path: str = None) -> Counter:
     if file_path:
         corpus = open(file_path).read()
     if not corpus:
@@ -31,7 +64,9 @@ def create_dictionary(corpus=None, file_path=None):
     return Counter(words(corpus))
 
 
-def create_dictionary_from_csv(file_path, header=False, delimiter=" "):
+def create_dictionary_from_csv(
+        file_path: str, header: bool = False,
+        delimiter: str = " ") -> set:
     with open(file_path, 'r', encoding='utf8') as f:
         if header:
             f.readline()
@@ -39,7 +74,8 @@ def create_dictionary_from_csv(file_path, header=False, delimiter=" "):
     return set(line.split(delimiter)[0] for line in words)
 
 
-def create_trie_dictionary(corpus=None, file_path=None):
+def create_trie_dictionary(
+        corpus: str = None, file_path: str = None) -> Trie:
     if filepath:
         corpus = open(file_path).read()
     lang_dict = create_dictionary(corpus)
@@ -49,7 +85,8 @@ def create_trie_dictionary(corpus=None, file_path=None):
     return model
 
 
-def words_dictionary_filepath(lang='en', size='50k'):
+def words_dictionary_filepath(
+        lang: str = 'en', size: str = '50k') -> str:
     """
         lang: str, default='en'
             Currently only English (en) / Dutch (nl) supported.
@@ -62,7 +99,8 @@ def words_dictionary_filepath(lang='en', size='50k'):
         DATA_DIR, 'dictionaries', lang, '{}_{}.txt'.format(lang, size))
 
 
-def words_dictionary_trie_filepath(lang='en', size='50k'):
+def words_dictionary_trie_filepath(
+        lang: str = 'en', size: str = '50k') -> str:
     """
         lang: str, default='en'
             Currently only English (en) / Dutch (nl) supported.
@@ -75,7 +113,8 @@ def words_dictionary_trie_filepath(lang='en', size='50k'):
         DATA_DIR, 'dictionaries', lang, '{}_{}_trie'.format(lang, size))
 
 
-def words_set_dictionary(lang='en', size='50k'):
+def words_set_dictionary(
+        lang: str = 'en', size: str = '50k') -> set:
     """
         lang: str, default='en'
             Currently only English (en) / Dutch (nl) supported.
@@ -87,7 +126,8 @@ def words_set_dictionary(lang='en', size='50k'):
     return create_dictionary_from_csv(words_dictionary_filepath(lang, size))
 
 
-def words_trie_dictionary(lang='en', size='50k'):
+def words_trie_dictionary(
+        lang: str = 'en', size: str = '50k') -> Trie:
     """
         lang: str, default='en'
             Currently only English (en) / Dutch (nl) supported.
@@ -100,21 +140,21 @@ def words_trie_dictionary(lang='en', size='50k'):
         words_dictionary_filepath(lang, size), header='include')
 
 
-def cleanhtml(raw_html):
+def cleanhtml(raw_html: str) -> str:
     assert isinstance(raw_html, str), '{} must be a string'.format(raw_html)
     cleanr = re.compile('<.*?>')
     cleantext = re.sub(cleanr, '', raw_html)
     return cleantext
 
 
-def reduce_lengthening(text):
+def reduce_lengthening(text: str) -> str:
     """Correcting more than twice repeated characters in words."""
     assert isinstance(text, str), '{} must be a string'.format(text)
     pattern = re.compile(r"(.)\1{2,}")
     return pattern.sub(r"\1\1", text)
 
 
-def edits_1(word):
+def edits_1(word: str) -> set:
     """All edits that are one edit away from `word`."""
     assert isinstance(word, str), '{} must be a string'.format(word)
     letters = 'abcdefghijklmnopqrstuvwxyz'
@@ -126,31 +166,33 @@ def edits_1(word):
     return set(deletes + transposes + replaces + inserts)
 
 
-def edits_2(word):
+def edits_2(word: str) -> tuple:
     """All edits that are two edits away from `word`."""
     assert isinstance(word, str), '{} must be a string'.format(word)
-    return (e2 for e1 in edits_1(word) for e2 in edits_1(e1))
+    return tuple(e2 for e1 in edits_1(word) for e2 in edits_1(e1))
 
 
-def _edit_dist(word, dist=2, k=None):
+def _edit_dist(word: str, dist: int = 2, k: int = None) -> tuple:
     """All edits that are `n` edits away from `word`."""
     if k is None:
         k = dist
     assert dist > 0 and k > 0
     if k == 1:
         return edits_1(word)
-    new_words = (w2 for w1 in edits_1(word)
-                 for w2 in _edit_dist(w1, dist, k - 1))
-    return list(set(new_words)) if k == dist else new_words
+    new_words = tuple(
+        w2 for w1 in edits_1(word)
+        for w2 in _edit_dist(w1, dist, k - 1))
+    return tuple(set(new_words)) if k == dist else new_words
 
 
-def edit_dist(word, dist=2):
+def edit_dist(word: str, dist: int = 2) -> tuple:
     assert isinstance(word, str), '{} must be a string'.format(word)
     assert isinstance(dist, int)
     return _edit_dist(word, dist)
 
 
-def cluster_words_by_edit_distance1(words, dist=2):
+def cluster_words_by_edit_distance1(
+        words: Iterable[str], dist: int = 2) -> dict:
     assert isinstance(words, (list, tuple)) and any(isinstance(w, str)
         for w in words), 'words must be an iterable of strings'
     assert isinstance(dist, int)
@@ -163,7 +205,8 @@ def cluster_words_by_edit_distance1(words, dist=2):
     return cluster
 
 
-def cluster_words_by_edit_distance2(words, verbose=True, **kwargs):
+def cluster_words_by_edit_distance2(
+        words: Iterable[str], verbose: bool = True, **kwargs) -> dict:
     """
     Cluster words with affinity propagation using negative
     edit distance as similarity measure.
@@ -180,16 +223,18 @@ def cluster_words_by_edit_distance2(words, verbose=True, **kwargs):
 
     # Compute word clusters with affinity propagation
     # using edit distance similarity between words as input.
-    from ..cluster import affinity_propagation
-    return affinity_propagation(words, lev_similarity, verbose, **kwargs)
+    from ..cluster.affinity_propagation import ap_precomputed
+    return ap_precomputed(words, lev_similarity, verbose, **kwargs)
 
 
-def count_words(sentence, delimiter=' '):
+def count_words(sentence: str, delimiter: str = ' ') -> int:
     assert isinstance(sentence, str), '{} must be a string'.format(sentence)
     return len(sentence.split(delimiter))
 
 
-def join_bigrams_with_replacements(s, replacements=lambda w, default: default):
+def join_bigrams_with_replacements(
+        s: Iterable[Iterable['str']],
+        replacements=lambda w, default: default) -> str:
     """
     Function to join a list of bigrams back into a sentence taking into account
     unigram replacements for bigrams.
@@ -248,8 +293,10 @@ def join_bigrams_with_replacements(s, replacements=lambda w, default: default):
     return string
 
 
-def correct_word_compounding(dfs, language_dictionary,
-                             split_on_both_accurate=True, threshold=3):
+def correct_word_compounding(
+        dfs: pd.Series, language_dictionary,
+        split_on_both_accurate: bool = True,
+        threshold: int = 3) -> pd.DataFrame:
     """
     List all bigrams which are also written as unigrams
     by removing one space character
@@ -357,7 +404,7 @@ def correct_word_compounding(dfs, language_dictionary,
     # List of word replacements to perform on the text
     replacements = {}
     replacements.update({
-        w[1]["unibigram{}".format(i)]: w[1]["bigram"]
+        w[1][f"unibigram{i}"]: w[1]["bigram"]
         for w in bigrams[make_bigram_mask].iterrows() for i in range(2)})
     replacements.update({
         w[1]["bigram"]: w[1]["unibigram0"]
@@ -373,7 +420,7 @@ def correct_word_compounding(dfs, language_dictionary,
     return tokens
 
 
-def tf_idf(documents):
+def tf_idf(documents: Iterable[str]) -> Tuple[dict, dict, dict]:
     N = len(documents)
     assert N > 0, "Count of documents must be at least 1."
     corpus = " ".join(documents)
@@ -387,26 +434,30 @@ def tf_idf(documents):
     return tf_idf, tf, df
 
 
-def replace_contractions(text, cDict=english_contractions):
+def replace_contractions(
+        text: str,
+        contractions: dict = english_contractions) -> str:
     """
     Based on https://gist.github.com/nealrs/96342d8231b75cf4bb82
 
     :param:
         text: str
             Input text
-        cDict: dict (default=english_contractions)
+        contractions: dict (default=english_contractions)
             Dictionary of contractions (key) and their expanded forms (value).
     """
-    c_re = re.compile(r'\b(%s)\b' % '|'.join(cDict.keys()))
+    c_re = re.compile(r'\b(%s)\b' % '|'.join(contractions.keys()))
 
     def replace(match):
-        return cDict[match.group(0)]
+        return contractions[match.group(0)]
 
     return c_re.sub(replace, text)
 
 
-def KNNNameMatching(A, B, vectorizer_kws={}, nn_kws={}, max_distance=None,
-                    return_B=True):
+def KNNNameMatching(
+        A: Iterable[str], B: Iterable[str],
+        vectorizer_kws: dict = {}, nn_kws: dict = {},
+        max_distance: float = None, return_B=True) -> list:
     """
     Nearest neighbor name matching of sentences in B to A.
     """
@@ -436,7 +487,9 @@ def KNNNameMatching(A, B, vectorizer_kws={}, nn_kws={}, max_distance=None,
     return result
 
 
-def bigram_context(documents, window_size=2, unique=False, sort=True):
+def bigram_context(
+        documents: Iterable[str], window_size: int = 2,
+        unique: bool = False, sort: bool = True) -> pd.DataFrame:
     """
     Get bigram context (word pairs) within given window size
     from given documents
@@ -461,7 +514,9 @@ def bigram_context(documents, window_size=2, unique=False, sort=True):
     return df
 
 
-def cluster_urls(urls, min_cluster_size=10):
+def cluster_urls(
+        urls: Iterable[str],
+        min_cluster_size: int = 10) -> pd.DataFrame:
     """
     Cluster URLs by regex rules defined in this package:
     https://pypi.org/project/urlclustering/
@@ -480,12 +535,12 @@ def cluster_urls(urls, min_cluster_size=10):
     return clusters
 
 
-def corpus_level_tfidf(texts, **vectorizer_kwargs):
+def corpus_level_tfidf(
+        texts: Iterable[str], **vectorizer_kwargs) -> Tuple[Iterable[float], Iterable[str]]:
     """
     See book: Ziegler, C.N., 2012. Mining for strategic competitive
     intelligence. Springer. pp. 128-130.
     """
-    assert isinstance(texts, pd.Series), "texts must be a pandas Series."
     from sklearn.feature_extraction.text import CountVectorizer
 
     with np.errstate(divide='ignore'):
@@ -507,12 +562,14 @@ def corpus_level_tfidf(texts, **vectorizer_kwargs):
         idf_vect = CountVectorizer(
             binary=True, vocabulary=terms, **vectorizer_kwargs)
         idf = np.array(np.log(
-            texts.shape[0] / (1. + idf_vect.fit_transform(texts).sum(0))
+            len(texts) / (1. + idf_vect.fit_transform(texts).sum(0))
         )).reshape(-1)
         return tf * idf, terms
 
 
-def foreground_keywords_extraction(D_f, D_b, **vectorizer_kwargs):
+def foreground_keywords_extraction(
+        D_f: Iterable[str], D_b: Iterable[str],
+        **vectorizer_kwargs) -> Iterable[str]:
     """
     Keyphrase extraction by contrasting foreground and background
     aggregated tf-idf weights of terms to enable context awareness.
@@ -523,6 +580,7 @@ def foreground_keywords_extraction(D_f, D_b, **vectorizer_kwargs):
     Conference on Web Intelligence and Intelligent Agent Technology (Vol. 1,
     pp. 932-937). http://www2.informatik.uni-freiburg.de/~cziegler/papers/WI-08-CR.pdf
     """
+    # TODO: the extracted keywords are NOT good quality, needs more improvement
     weights_f, terms_f = corpus_level_tfidf(D_f, **vectorizer_kwargs)
     vectorizer_kwargs.update({'vocabulary': terms_f})
     weights_b, _ = corpus_level_tfidf(D_b, **vectorizer_kwargs)
@@ -535,7 +593,7 @@ def foreground_keywords_extraction(D_f, D_b, **vectorizer_kwargs):
     mask = np.isposinf(W)
     W[mask] = weights_f[mask]
 
-    # print('\n'.join([str(x) for x in list(zip(terms_f, W))]))
+    # print('\n'.join([str(x) for x in list(zip(terms_f, W, weights_f, weights_b))]))
     return np.array(terms_f)[np.argsort(-W)]
 
 

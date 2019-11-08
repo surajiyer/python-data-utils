@@ -7,11 +7,20 @@
     author: Suraj Iyer
 """
 
+__package__ = "python_data_utils.cluster"
+__all__ = [
+    'cluster_based_similarity_matrix',
+    'pairwise_dissimilarity_matrix',
+    'affinity_matrix',
+    'aggregate_matrices',
+    'multiview_ensemble_similarity'
+]
+
 import pandas as pd
 import time
-from .. import numpy_utils as npu
+from ..numpy import utils as npu
 from scipy.spatial import distance
-np = pd.np
+import numpy as np
 
 
 def cluster_based_similarity_matrix(partitions: pd.DataFrame):

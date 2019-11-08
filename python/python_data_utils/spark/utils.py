@@ -1,13 +1,15 @@
 # coding: utf-8
 
 """
-    description: Pandas utility functions and classes
+    description: Spark utility functions and classes
     author: Suraj Iyer
 """
 
+__all__ = ['melt', 'one_hot_encode']
+
 import pyspark.sql.functions as F
 from pyspark.sql import DataFrame
-from typing import Iterable
+from typing import Iterable, Tuple
 from pyspark.sql.types import IntegerType
 
 
@@ -29,15 +31,26 @@ def melt(
     return _tmp.select(*cols)
 
 
-def one_hot_encode(df: DataFrame, column_name: str, prefix: str = None):
-    categories = df.select(column_name).distinct().rdd.flatMap(lambda x: x).collect()
+def one_hot_encode(
+        df: DataFrame,
+        column_name: str, prefix: str = None) -> Tuple[DataFrame, Tuple]:
+    """
+    :return df: DataFrame
+        Spark DF with new one-hot encoded columns.
+    :return columns:
+        Tuple of new column names.
+    """
+    categories = df\
+        .select(column_name).distinct()\
+        .rdd.flatMap(lambda x: x).collect()
     columns = []
     for category in categories:
-        function = F.udf(lambda item: 1 if item == category else 0, IntegerType())
+        function = F.udf(
+            lambda item: 1 if item == category else 0, IntegerType())
         if isinstance(prefix, str):
             new_column_name = prefix + '_' + category
         else:
             new_column_name = category
         df = df.withColumn(new_column_name, function(F.col(column_name)))
         columns.append(new_column_name)
-    return df, columns
+    return df, tuple(columns)

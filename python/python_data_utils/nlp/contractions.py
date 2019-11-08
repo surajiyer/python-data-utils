@@ -1,3 +1,5 @@
+__all__ = ['english_contractions', 'dutch_contractions']
+
 english_contractions = {
     "ain't": "am not",
     "aren't": "are not",

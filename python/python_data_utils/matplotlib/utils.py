@@ -5,6 +5,8 @@
     author: Suraj Iyer
 """
 
+__all__ = ['fig2data', 'fig2img']
+
 import numpy as np
 
 

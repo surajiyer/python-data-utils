@@ -5,12 +5,14 @@
     author: Suraj Iyer
 """
 
+__all__ = ['hdbscan_precomputed']
+
 import numpy as np
 import hdbscan
 
 
-def hdbscan_precomputed(items, similarity_matrix,
-                        verbose=True, **kwargs):
+def hdbscan_precomputed(
+        items, similarity_matrix, verbose=True, **kwargs):
     """
     Create clusters with HDBSCAN using
     given similarity matrix between items as input.
