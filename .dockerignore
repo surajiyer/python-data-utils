@@ -1,3 +1,6 @@
+# ignore pycharm artifacts
+.idea
+
 # ignore .git and cache files
 .git
 .cache
@@ -5,6 +8,7 @@
 # ignore python artifacts
 .ipynb_checkpoints
 __pycache__
+.pytest_cache
 
 # ignore log files
 *.log

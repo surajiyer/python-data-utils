@@ -1,6 +1,6 @@
 ARG PYTHON_VERSION=3.7-alpine
 FROM python:${PYTHON_VERSION}
-LABEL maintainer "Suraj Iyer <suraj.iyer@vodafoneziggo.com>"
+LABEL maintainer="Suraj Iyer <suraj.iyer@vodafoneziggo.com>"
 # ARG PYTHON_LIBS_PATH
 # RUN test -n "${PYTHON_LIBS_PATH}" || (echo "PYTHON_LIBS_PATH not set" && false)
 
