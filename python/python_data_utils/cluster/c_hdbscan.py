@@ -9,15 +9,22 @@ __all__ = ['hdbscan_precomputed']
 
 import numpy as np
 import hdbscan
+from typing import Iterable
 
 
 def hdbscan_precomputed(
-        items, similarity_matrix, verbose=True, **kwargs):
+        items: Iterable, similarity_matrix: Iterable[Iterable[float]],
+        verbose: bool = True, **kwargs) -> dict:
     """
     Create clusters with HDBSCAN using
     given similarity matrix between items as input.
 
     URL: https://github.com/scikit-learn-contrib/hdbscan
+    :param items:
+    :param similarity_matrix:
+    :param verbose:
+    :param kwargs:
+    :return:
     """
     try:
         items_iterator = iter(items)
@@ -46,18 +53,3 @@ def hdbscan_precomputed(
             print(" - *%s:* %s" % (
                 exemplar, ", ".join(str(d) for d in clusters[exemplar])))
     return clusters
-
-
-if __name__ == "__main__":
-    import sklearn.datasets as data
-    from sklearn.metrics.pairwise import pairwise_distances
-    moons, _ = data.make_moons(n_samples=50, noise=0.05)
-    blobs, _ = data.make_blobs(
-        n_samples=50, centers=[(-0.75, 2.25), (1.0, 2.0)], cluster_std=0.25)
-    test_data = np.vstack([moons, blobs])
-    similarity_matrix = pairwise_distances(test_data)
-    clusters = hdbscan_precomputed(
-        np.arange(test_data.shape[0]),
-        similarity_matrix,
-        min_cluster_size=5)
-    print(clusters)

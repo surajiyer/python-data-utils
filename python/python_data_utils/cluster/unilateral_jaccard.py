@@ -6,45 +6,44 @@
     author: Suraj Iyer
 """
 
-__all__ = ['ujaccard_similarity_score']
+__all__ = ['ujaccard_similarity_score', 'calculate_edges_list']
 
 import numpy as np
 from collections import deque
 import time
 import itertools as it
 import multiprocessing as mp
+from typing import Iterable, Tuple, Mapping, Hashable
 
 
 def dfs_paths_recursive(
-        graph: dict, start, goal, depth: int,
-        visited: set=set(), n_paths: int=0) -> int:
+        graph: Mapping, start, goal, depth: int,
+        visited: set = set(), n_paths: int = 0) -> int:
     """
     Depth-first search until given depth for finding all paths
     between start and goal vertex on given graph.
 
     Recursive version.
 
-    Parameters:
-    --------------
-    graph: dict
+    :param graph: dict
         Adjacency list of graph.
-    start:
+    :param start:
         key in graph corresponding to source vertex.
-    goal:
+    :param goal:
         key in graph corresponding to destination vertex.
-    depth: int
+    :param depth: int
         distance from start vertex within which to search.
-    visited: set
+    :param visited: set
         Set of visited nodes. Should be empty on first call.
-    n_paths: int
+    :param n_paths: int
         Number of paths from start to goal found so far.
         Should be empty on first call.
-
-    Returns:
-    ---------
-    int:
+    :return: int
         Number of unique paths between start and goal vertex.
     """
+    assert depth > -1
+    assert n_paths > -1
+
     # Mark the current node as visited
     visited |= {start}
 
@@ -72,29 +71,26 @@ def dfs_paths_recursive(
     return n_paths
 
 
-def dfs_paths(graph: dict, start, goal, depth: int) -> list:
+def dfs_paths(graph: Mapping, start, goal, depth: int) -> list:
     """
     Depth-first search until given depth for finding all paths
     between start and goal vertex on given graph.
 
     Iterative version.
 
-    Parameters:
-    --------------
-    graph: dict
+    :param graph: dict
         Adjacency list of graph.
-    start:
+    :param start:
         key in graph corresponding to source vertex.
-    goal:
+    :param goal:
         key in graph corresponding to destination vertex.
-    depth: int
+    :param depth: int
         distance from start vertex within which to search.
-
-    Returns:
-    ---------
-    list:
+    :return: list
         All unique paths between start and goal vertex.
     """
+    assert depth > -1
+
     stack = deque([(start, {start})])
     n_paths = 0
 
@@ -121,27 +117,22 @@ def dfs_paths(graph: dict, start, goal, depth: int) -> list:
     return n_paths
 
 
-def calculate_edges_list(documents: list) -> np.ndarray:
+def calculate_edges_list(documents: Iterable[set]) -> dict:
     """
     Compare every document with each other and check for intersection
     in words. If doc_{i} ∩ doc_{j}, then create an edge between i and
     j.
 
-    Parameters:
-    --------------
-    documents: list of sets [set,...]
+    :param documents: Iterable of sets, [set,...]
         The sets represent a single document / item. The elements of
         the set are essentially the "words".
-
-    Returns:
-    ---------
-    dict:
-        An adjacency list where key = document indices and
-        value = set of document indices connected to key.
+    :return: dict
+        An adjacency mapping where key = document index i and
+        value = set of document indices connected to documents[i].
     """
     # compute adjacency list of edges between documents
     r = range(len(documents))
-    edges = {i: set() for i in r}
+    edges: dict = {i: set() for i in r}
     start = time.time()
 
     def is_edge(args):
@@ -155,21 +146,16 @@ def calculate_edges_list(documents: list) -> np.ndarray:
     return edges
 
 
-def calculate_edges_matrix(documents: list) -> np.ndarray:
+def calculate_edges_matrix(documents: Iterable[set]) -> np.ndarray:
     """
     Compare every document with each other and check for intersection
     in words. If doc_{i} ∩ doc_{j}, then create an edge between i and
     j.
 
-    Parameters:
-    --------------
-    documents: list of sets [set,...]
+    :param documents: Iterable of sets [set,...]
         The sets represent a single document / item. The elements of
         the set are essentially the "words".
-
-    Returns:
-    ---------
-    np.ndarray:
+    :return: np.ndarray
         An adjacency matrix.
     """
     documents = np.array(documents)
@@ -179,7 +165,29 @@ def calculate_edges_matrix(documents: list) -> np.ndarray:
         np.bitwise_and.outer(documents, documents))
 
 
-def _consumer(q, edges, depth, return_dict):
+def _consumer(
+        q: mp.Queue, G: Tuple[Iterable[set], Mapping[Hashable, set]],
+        depth: int, return_dict):
+    """
+    Consumer process for the ujaccard_similarity_score function.
+
+    :param q: Multiprocessing queue
+    :param G: (V, E)
+        V = Iterable of sets [set,...]
+            Each set represent a single document / item. The elements of
+            the set are essentially the "words".
+        E = Mapping of sets
+            The key represents the index of a single document in V and
+            the value is a set of indices corresponding to documents it
+            is linked with.
+    :param depth: int
+        Max. depth up to which to calculate ujaccard score.
+    :param return_dict
+        Dictionary shared between processes to store final result.
+    """
+    assert depth > -1
+    V, E = G
+
     while True:
         # get arguments from queue
         args = q.get()
@@ -193,13 +201,15 @@ def _consumer(q, edges, depth, return_dict):
         # print(f"dfs_paths\t\tDoc{i}, Doc{j}, # Paths: {n_paths}, \
         #     Time to run: {time.time() - start}")
         # start = time.time()
-        n_paths = dfs_paths_recursive(edges, i, j, depth)
+        n_paths = dfs_paths_recursive(E, V[i], V[j], depth)
         # print(f"dfs_paths_recursive\tDoc{i}, Doc{j}, # Paths: {n_paths}, \
         #     Time to run: {time.time() - start}")
         return_dict[(i, j)] = n_paths
 
 
-def ujaccard_similarity_score(G, depth: int=1, n_jobs=1) -> np.ndarray:
+def ujaccard_similarity_score(
+        G: Tuple[Iterable[set], Mapping[Hashable, set]],
+        depth: int = 1, n_jobs: int = -1) -> np.ndarray:
     """
     Given a graph G where nodes = documents and edges
     represents intersection between documents. The uJaccard
@@ -209,34 +219,34 @@ def ujaccard_similarity_score(G, depth: int=1, n_jobs=1) -> np.ndarray:
 
     uJaccard(u, v) = |paths(u, v, depth)| / |edges(u)|
 
-    Parameters:
-    -----------
-    G: (V, E)
-        V = list of sets [set,...]
+    :param G: (V, E)
+        V = Iterable of sets [set,...]
             Each set represent a single document / item. The elements of
             the set are essentially the "words".
-        E = dict of sets
+        E = Mapping of sets
             The key represents the index of a single document in V and
             the value is a set of indices corresponding to documents it
             is linked with.
-    depth: int
+    :param depth: int
         Maximum path length between documents.
-
-    Returns:
-    --------
-    np.ndarray
+    :param n_jobs: int, Optional (default=None)
+        if None, use all cpu resources, else only the number specified.
+    :return: np.ndarray
         Similarity matrix \forall v \in V.
     """
+    assert isinstance(depth, int) and depth > 0
+    assert isinstance(n_jobs, int) and n_jobs >= -1
+
     # Pre-compute the number of outgoing edges from document i
     V, E = G
-    n_edges = np.array([len(E[i]) for i in range(len(V))])
+    n_edges = np.array([len(E[i]) for i in V])
     mask = n_edges > 0
 
     # Initialize the similarity matrix
     uJaccard = np.identity(len(V), dtype=float)
 
     # initialize multiprocessing queue
-    if not isinstance(n_jobs, int) or n_jobs <= 0:
+    if n_jobs == -1:
         n_jobs = mp.cpu_count()
     q = mp.Queue(maxsize=2 * n_jobs + 1)
 
@@ -246,12 +256,11 @@ def ujaccard_similarity_score(G, depth: int=1, n_jobs=1) -> np.ndarray:
 
     # initialize the worker processes
     pool = mp.Pool(n_jobs, initializer=_consumer,
-                   initargs=(q, E, depth, return_dict))
+                   initargs=(q, G, depth, return_dict))
 
     # produce items into queue
     for i, j in it.combinations(np.nonzero(mask)[0], 2):
         q.put((i, j))
-    # q.put((0, 2))
 
     # tell workers we're done
     for i in range(n_jobs):
@@ -270,15 +279,3 @@ def ujaccard_similarity_score(G, depth: int=1, n_jobs=1) -> np.ndarray:
     uJaccard[:, mask] /= n_edges[mask]
 
     return uJaccard
-
-
-if __name__ == "__main__":
-    # Toy example directly from the paper
-    edges = [{1, 2}, {1, 3}, {1, 4}, {1, 5}, {1, 6}, {2, 7}, {3, 7},
-             {4, 7}, {7, 8}, {7, 9}, {7, 10}, {7, 11}, {8, 12},
-             {9, 12}, {10, 12}, {11, 12}]
-    nodes = set().union(*edges)
-    nodes = [set().union(*[e for e in edges if n in e]) for n in nodes]
-    print(ujaccard_similarity_score(nodes, depth=1))
-    print(ujaccard_similarity_score(nodes, depth=2))
-    print(ujaccard_similarity_score(nodes, depth=3))
