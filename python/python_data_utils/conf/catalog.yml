@@ -1,0 +1,58 @@
+english_dictionary_small:
+  type: csv
+  filepath: data/dictionaries/en/en_50k.txt
+  url: https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/en/en_50k.txt
+  header:
+  names: ['word', 'count']
+  sep: ' '
+
+english_dictionary_big:
+  type: csv
+  filepath: data/dictionaries/en/en_full.txt
+  url: https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/en/en_full.txt
+  header:
+  names: ['word', 'count']
+  sep: ' '
+
+dutch_thousand_common_words:
+  type: csv
+  filepath: data/dictionaries/nl/1000MostCommonWords-nl.txt
+  url: https://1000mostcommonwords.com/1000-most-common-dutch-words/
+  header: None
+
+dutch_dictionary_small:
+  type: csv
+  filepath: data/dictionaries/nl/nl_50k.txt
+  url: https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/nl/nl_50k.txt
+  header:
+  names: ['word', 'count']
+  sep: ' '
+
+dutch_dictionary_big:
+  type: csv
+  filepath: data/dictionaries/nl/nl_full.txt
+  url: https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/nl/nl_full.txt
+  header:
+  names: ['word', 'count']
+  sep: ' '
+
+dutch_trie_dictionary_small:
+  type: pkl
+  filepath: data/dictionaries/nl/nl_50k_trie.pkl
+  url: https://raw.githubusercontent.com/surajiyer/python-data-utils/master/python/python_data_utils/data/nl/nl_50k_trie.pkl
+
+dutch_trie_dictionary_big:
+  type: pkl
+  filepath: data/dictionaries/nl/nl_full_trie.pkl
+  url: https://raw.githubusercontent.com/surajiyer/python-data-utils/master/python/python_data_utils/data/nl/nl_full_trie.pkl
+
+dutch_stopwords:
+  type: csv
+  filepath: data/dictionaries/nl/stopwords-nl.txt
+  url: https://raw.githubusercontent.com/stopwords-iso/stopwords-nl/master/stopwords-nl.txt
+  header:
+
+dutch_subtlex:
+  type: zip
+  filepath: data/dictionaries/nl/SUBTLEX-NL.txt.zip
+  url: http://crr.ugent.be/subtlex-nl/SUBTLEX-NL.txt.zip
