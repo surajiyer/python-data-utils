@@ -11,16 +11,17 @@ from bs4 import BeautifulSoup
 from bs4.element import Comment
 import requests
 from collections import OrderedDict
+from typing import Iterable
 
 
 class WebTextScraper:
     __cache = OrderedDict()
-    __cache_limit = -1
+    __cache_limit: int = -1
     __exclude_tags = frozenset(('style', 'script', 'head', 'title', 'meta', '[document]'))
     exclude_tags = set()
-    __user_agent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.131 Safari/537.36"
+    __user_agent: str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.131 Safari/537.36"
 
-    def set_cache_limit(self, limit=-1):
+    def set_cache_limit(self, limit: int = -1):
         assert limit != 0, 'Limit cannot be zero.'
         self.__cache_limit = limit
 
@@ -36,27 +37,26 @@ class WebTextScraper:
         while len(self.__cache) > self.__cache_limit:
             self.__cache.popitem(False)
 
-    def drop_url_from_cache(self, url):
+    def drop_url_from_cache(self, url: str):
         if url in self.__cache:
             del self.__cache[url]
 
-    def tag_visible(self, element):
+    def tag_visible(self, element) -> bool:
         if element.parent.name in self.__exclude_tags | self.exclude_tags:
             return False
         if isinstance(element, Comment):
             return False
         return True
 
-    def text_from_html(self, body):
+    def text_from_html(self, body: str) -> str:
         soup = BeautifulSoup(body, 'html.parser')
         texts = soup.findAll(text=True)
         visible_texts = filter(self.tag_visible, texts)
-        return u" ".join(t.strip() for t in visible_texts).strip(),\
-            visible_texts
+        return u" ".join(t.strip() for t in visible_texts).strip()
 
     def text_from_url(
-            self, url, timeout=5, cache_it=True, user_agent=None,
-            ignore_errors=True):
+            self, url: str, timeout: int = 5, cache_it: bool = True,
+            user_agent: str = None, ignore_errors: bool = True) -> str:
         if url in self.__cache:
             return self.text_from_html(self.__cache[url])
 
@@ -64,8 +64,7 @@ class WebTextScraper:
             url, timeout=timeout,
             headers={
                 'User-Agent': user_agent if user_agent else self.__user_agent})
-        if page_response.status_code.real >= 200\
-                and page_response.status_code.real < 300:
+        if 200 <= page_response.status_code.real < 300:
             text = self.text_from_html(page_response.content)
 
             if cache_it and url not in self.__cache:
@@ -81,7 +80,7 @@ class WebTextScraper:
 
         return text
 
-    def urls_from_html(self, body):
+    def urls_from_html(self, body: str) -> set:
         soup = BeautifulSoup(body, 'html.parser')
         urls = {a.get('href') for a in soup.find_all('a', href=True)}
         # Remove slash at the end
@@ -92,8 +91,8 @@ class WebTextScraper:
         return urls
 
     def urls_from_url(
-            self, url, timeout=5, cache_it=True, user_agent=None,
-            ignore_errors=True):
+            self, url: str, timeout: int = 5, cache_it: bool = True,
+            user_agent: str = None, ignore_errors: bool = True) -> set:
         if url in self.__cache:
             urls = self.urls_from_html(self.__cache[url])
             urls = {
@@ -104,8 +103,7 @@ class WebTextScraper:
             url, timeout=timeout,
             headers={
                 'User-Agent': user_agent if user_agent else self.__user_agent})
-        if page_response.status_code.real >= 200\
-                and page_response.status_code.real < 300:
+        if 200 <= page_response.status_code.real < 300:
             urls = self.urls_from_html(page_response.content)
             urls = {
                 url + link if link.startswith('/') else link for link in urls}
@@ -124,8 +122,9 @@ class WebTextScraper:
         return urls
 
     def scrape_text(
-            self, start_url, search_depth=2, allowed_domains=[],
-            user_agent=None, ignore_errors=True):
+            self, start_url: str, search_depth: int = 2,
+            allowed_domains: Iterable[str] = [],
+            user_agent: str = None, ignore_errors: bool = True) -> set:
         assert search_depth > -1, 'Search depth must be >= 0.'
         current_depth = 0
         to_visit = set(start_url)

@@ -65,3 +65,6 @@ beautifulsoup4
 Cython
 numba               # Automatic translation of python functions to JIT compiler executable machine code for performance
 line_profiler
+
+## Others
+requests
