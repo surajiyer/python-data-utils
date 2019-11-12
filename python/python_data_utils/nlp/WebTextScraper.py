@@ -151,6 +151,6 @@ class WebTextScraper:
                             domain in url for domain in allowed_domains)))
             current_depth += 1
 
-        assert len(to_visit) == 0, 'Shit, this should not have happed..'
+        assert len(to_visit) == 0, 'Shit, this should not have happend.'
 
         return visited

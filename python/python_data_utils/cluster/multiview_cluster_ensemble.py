@@ -7,7 +7,6 @@
     author: Suraj Iyer
 """
 
-__package__ = "python_data_utils.cluster"
 __all__ = [
     'cluster_based_similarity_matrix',
     'pairwise_dissimilarity_matrix',
@@ -18,12 +17,14 @@ __all__ = [
 
 import pandas as pd
 import time
-from ..numpy import utils as npu
+from python_data_utils.numpy import utils as npu
 from scipy.spatial import distance
 import numpy as np
+from typing import Tuple
 
 
-def cluster_based_similarity_matrix(partitions: pd.DataFrame):
+def cluster_based_similarity_matrix(
+        partitions: pd.DataFrame) -> np.ndarray:
     """
     Calculate cluster based similarity matrix.
 
@@ -63,11 +64,7 @@ def cluster_based_similarity_matrix(partitions: pd.DataFrame):
     return 1. - result
 
 
-def pdm(partitions: np.ndarray):
-    return npu.rowwise_dissimilarity(partitions)
-
-
-def pairwise_dissimilarity_matrix(partitions: np.ndarray):
+def pairwise_dissimilarity_matrix(partitions: np.ndarray) -> np.ndarray:
     """
     Calculate pairwise dissimilarity matrix for given cluster partitions.
 
@@ -84,11 +81,12 @@ def pairwise_dissimilarity_matrix(partitions: np.ndarray):
     np.ndarray
         Pairwise dissimilarity matrix
     """
-    pmd = npu.rowwise_cosine_similarity(pdm(partitions))
+    pmd = npu.rowwise_cosine_similarity(
+        npu.rowwise_dissimilarity(partitions))
     return pmd
 
 
-def affinity_matrix(distance_matrix: np.ndarray, c: float):
+def affinity_matrix(distance_matrix: np.ndarray, c: float) -> np.ndarray:
     """
     Calculate affinity matrix for given distance matrix.
 
@@ -107,7 +105,9 @@ def affinity_matrix(distance_matrix: np.ndarray, c: float):
     return np.exp(- (distance_matrix ** 2) / c)
 
 
-def aggregate_matrices(cbsm, pdm, afm, tol=1e-08):
+def aggregate_matrices(
+        cbsm: np.ndarray, pdm: np.ndarray,
+        afm: np.ndarray, tol: float = 1e-08) -> np.ndarray:
     """
     Combine the given similarity matrices into one similarity matrix.
 
@@ -134,8 +134,9 @@ def aggregate_matrices(cbsm, pdm, afm, tol=1e-08):
     return 1. - D_new
 
 
-def multiview_ensemble_similarity(partitions, *similarity_matrices,
-                                  affinity_c=.1, verbose=True):
+def multiview_ensemble_similarity(
+        partitions, *similarity_matrices,
+        affinity_c=.1, verbose=True) -> Tuple(np.ndarray, np.ndarray, np.ndarray, np.ndarray):
     if verbose:
         print("Creating cluster-based similarity matrix.")
         start = time.time()

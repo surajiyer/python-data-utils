@@ -5,10 +5,8 @@
     author: Suraj Iyer
 """
 
-__package__ = "python_data_utils.decorators"
-
 from pandas import DataFrame, Series
-from ..pandas import utils as pdu
+import python_data_utils.pandas.utils as pdu
 import os.path as path
 
 

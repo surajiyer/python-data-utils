@@ -4,52 +4,55 @@ scipy
 pandas
 xlrd
 pandas-profiling
-pandasql  # For SQL like queries on pandas dataframes
-patsy  # For R like linear formula generator
-fancyimpute  # Various data imputation functions
+pandasql            # For SQL like queries on pandas dataframes
+patsy               # For R like linear formula generator
+fancyimpute         # Various data imputation functions
 statsmodels
 scikit-learn
-mord  # Ordinal regression algorithms
-imbalanced-learn  # ML algorithms for imbalanced datasets
+mord                # Ordinal regression algorithms
+imbalanced-learn    # ML algorithms for imbalanced datasets
 xgboost
 lightgbm
-distance  # For various distance functions
+distance            # For various distance functions
 dill==0.2.8.2
 tqdm
 progressbar2==3.37.1
-hyperopt  # Bayesian optimization for hyper-parameter tuning
-pyarrow  # For reading parquet files
-fastparquet  # For reading parquet files
+hyperopt            # Bayesian optimization for hyper-parameter tuning
+pyarrow             # For reading parquet files
+fastparquet         # For reading parquet files
 urlclustering
+hdbscan             # heirarchical density-based spatial clustering of applications with noise
+PyYAML              # For loading .yml config files
 
-# Network-Analysis
+## Network-Analysis
 graphviz
 # networkx
 
-# Visualization-Packages
+## Visualization-Packages
 matplotlib==3.0.3
 seaborn==0.9.0
 plotly
 dash
 dash-daq
 
-# Jupyter-Notebook
+## Jupyter-Notebook
 jupyterlab
-nbconvert  # Required to setup Export to PDF in Jupyter
-ipykernel  # Required to setup kernel correctly for Jupyter
+nbconvert           # Required to setup Export to PDF in Jupyter
+ipykernel           # Required to setup kernel correctly for Jupyter
 ipywidgets
+ipympl              # For interactive matplotlib figures in Jupyter
 imagesize
-nb2xls  # export to excel files
+nb2xls              # Export Jupyter notebook to excel file
 
-# Deep-Learning
+## Deep-Learning
 tensorflow
 # tensorflow-gpu
 
-# Web-Server-Tools
+## Web-Server-Tools
 Django
 Flask
 
-# NLP
+## NLP
 nltk
 spacy
 # python-frog
@@ -58,7 +61,7 @@ symspellpy
 fuzzywuzzy
 beautifulsoup4
 
-# Advanced-Scientific-Computing
+## Advanced-Scientific-Computing
 Cython
-numba  # Automatic translation of python functions to JIT compiler executable machine code for performance
+numba               # Automatic translation of python functions to JIT compiler executable machine code for performance
 line_profiler

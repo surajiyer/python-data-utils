@@ -7,10 +7,9 @@
     URL: https://norvig.com/spell-correct.html
 """
 
-__package__ = "python_data_utils.nlp.spell_checking"
 __all__ = ['SimpleSpellCheck']
 
-from .. import trie, utils
+from python_data_utils.nlp import trie, utils
 from typing import Sequence
 
 

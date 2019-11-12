@@ -34,7 +34,8 @@ class Trie(MutableMapping):
 
     def add(self, word, additional_keys=None, update=False):
         assert isinstance(word, str), 'word must be a string'
-        assert additional_keys is None or (isinstance(additional_keys, dict) and Trie._special_keys.intersection(additional_keys) == set())
+        assert additional_keys is None or (isinstance(additional_keys, dict)
+                                           and Trie._special_keys.intersection(additional_keys) == set())
 
         current = self.root
         for ch in word:
@@ -73,7 +74,7 @@ class Trie(MutableMapping):
     def addAll(self, words):
         try:
             word = next(words)
-        except:
+        except StopIteration:
             return self
 
         if isinstance(word, dict):
@@ -138,14 +139,14 @@ class Trie(MutableMapping):
 
     def find_within_distance(self, word, dist=2):
         assert isinstance(word, str), 'word must be a string'
-        from utils import edit_dist
+        from .utils import edit_dist
         return set(word for word in edit_dist(word, dist) if self.find(word)[0])
 
     def _delete(self, current, word, index):
         assert isinstance(word, str), 'word must be a string'
 
         # Reached the end of the input word
-        if(index == len(word)):
+        if index == len(word):
             # adapt the linked list
             if 'next_node' in current:
                 current['prev_node']['next_node'] = current['next_node']
