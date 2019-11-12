@@ -9,7 +9,7 @@
 
 __all__ = ['SimpleSpellCheck']
 
-from python_data_utils.nlp import trie, utils
+from python_data_utils.nlp import trie
 from typing import Sequence
 
 
@@ -19,43 +19,18 @@ class SimpleSpellCheck:
     """
 
     @staticmethod
-    def load_from_corpus(corpus: str, file_path: str = None):
-        spellcheck = SimpleSpellCheck()
-        if file_path:
-            spellcheck.WORDS = utils.create_trie_dictionary(file_path=file_path)
-        else:
-            spellcheck.WORDS = utils.create_trie_dictionary(corpus=corpus)
-        spellcheck.N = spellcheck.WORDS.root['count']
-        return spellcheck
-
-    @staticmethod
-    def load_from_dictionary_csv(dictionary_file: dict, delimiter: str = " "):
-        spellcheck = SimpleSpellCheck()
-        spellcheck.WORDS, spellcheck.N = trie.build_trie_from_dict_file(
-            dictionary_file, header='include', delimiter=delimiter,
-            callback=lambda f: sum(int(line.split(delimiter)[1]) for line in f.readlines()))
-        spellcheck.WORDS.root['count'] = spellcheck.N
-
-        # Update the counts to int type
-        for word in spellcheck.WORDS:
-            spellcheck.WORDS.add(
-                word,
-                {'count': int(spellcheck.WORDS['{}__count'.format(word)])},
-                update=True)
-
-        return spellcheck
-
-    @staticmethod
-    def load_from_trie(dictionary_file: dict, file_type: str = "pkl"):
+    def load_from_trie(filepath: str, file_type: str = "pkl"):
         file_type = file_type.lower()
-        assert any(file_type == x for x in ('pkl', 'json'))
+        assert file_type in ('pkl', 'json', 'txt')
 
         spellcheck = SimpleSpellCheck()
 
         if file_type == "json":
-            spellcheck.WORDS = trie.Trie().load_from_json(dictionary_file)
-        elif file_type == "pkl" or file_type == "pickle":
-            spellcheck.WORDS = trie.Trie().load_from_pickle(dictionary_file)
+            spellcheck.WORDS = trie.Trie().load_from_json(filepath)
+        elif file_type == "pkl":
+            spellcheck.WORDS = trie.Trie().load_from_pickle(filepath)
+        elif file_type == "txt":
+            spellcheck.WORDS = trie.Trie().load_from_text_corpus(filepath)
         spellcheck.N = spellcheck.WORDS.root['count']
 
         return spellcheck

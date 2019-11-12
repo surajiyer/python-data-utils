@@ -14,9 +14,6 @@ import json
 
 
 class Trie(MutableMapping):
-    """
-    Trie class
-    """
 
     _special_keys = frozenset(('word', 'children', 'isEndOfWord', 'prev_node', 'next_node'))
 
@@ -213,6 +210,18 @@ class Trie(MutableMapping):
         json_file.close()
         return self
 
+    def load_from_text_corpus(
+            self, corpus: str = None,
+            file_path: str = None):
+        import re
+        from collections import Counter
+        if file_path:
+            corpus = open(file_path).read()
+        lang_dict = Counter(re.findall(r'\w+', corpus.lower()))
+        self.addAll(({'word': word, 'count': count}
+                     for word, count in lang_dict.items()))
+        return self
+
     def __getitem__(self, key):
         if isinstance(key, str):
             key = key.split('__')
@@ -246,35 +255,3 @@ class Trie(MutableMapping):
 
     def __contains__(self, key):
         return self.find(key)[0]
-
-
-def create_trie_dictionary_from_csv(file_path, header=False, columns=[], delimiter=" ", callback=None):
-    model = Trie()
-    value = None
-
-    with open(file_path, 'r', encoding='utf8') as f:
-
-        # Handling headers in input file
-        if header == 'include':
-            columns = f.readline().replace('\n', '').split(delimiter)
-        elif header == 'ignore':
-            f.readline()
-        start_pos = f.tell()
-
-        # add all words to a Trie data structure
-        if columns:
-            model.addAll(((lambda x: {c: x[i] for i, c in enumerate(columns)})(
-                line.replace('\n', '').split(delimiter)) for line in f.readlines()))
-        else:
-            model.addAll((line.replace('\n', '').split(delimiter)
-                          [0].lower() for line in f.readlines()))
-
-        # call the callback function
-        if callback:
-            f.seek(start_pos)
-            value = callback(f)
-
-    if not callback:
-        return model
-    else:
-        return model, value

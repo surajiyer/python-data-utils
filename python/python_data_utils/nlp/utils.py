@@ -8,13 +8,9 @@
 __all__ = [
     'words',
     'create_dictionary',
-    'create_dictionary_from_csv',
-    'create_trie_dictionary',
-    'words_dictionary_filepath',
-    'words_dictionary_trie_filepath',
     'words_set_dictionary',
     'words_trie_dictionary',
-    'cleanhtml',
+    'clean_html',
     'reduce_lengthening',
     'edits_1',
     'edits_2',
@@ -27,7 +23,6 @@ __all__ = [
     'correct_word_compounding',
     'tf_idf',
     'replace_contractions',
-    'replace',
     'KNNNameMatching',
     'bigram_context',
     'cluster_urls',
@@ -43,11 +38,8 @@ from collections import Counter
 import nltk
 from .trie import *
 from .contractions import *
-from os.path import dirname, join
+from python_data_utils.utils import load_artifact
 from typing import Iterable, Tuple
-
-DATA_DIR = join(dirname(__file__), 'data')
-DICTIONARIES_PATH = lambda lang: join(DATA_DIR, 'dictionaries', lang)
 
 
 def words(text: str) -> str:
@@ -64,83 +56,41 @@ def create_dictionary(
     return Counter(words(corpus))
 
 
-def create_dictionary_from_csv(
-        file_path: str, header: bool = False,
-        delimiter: str = " ") -> set:
-    with open(file_path, 'r', encoding='utf8') as f:
-        if header:
-            f.readline()
-        words = f.readlines()
-    return set(line.split(delimiter)[0] for line in words)
+def words_set_dictionary(dictionary_name: str) -> set:
+    """
+        dictionary_name: str
+            Name of the dictionary file to load words from.
+            Available word dictionaries:
+                1. english_dictionary_small
+                2. english_dictionary_big
+                3. dutch_dictionary_small
+                4. dutch_dictionary_big
+    """
+    assert dictionary_name in (
+        'english_dictionary_small', 'english_dictionary_big',
+        'dutch_dictionary_small', 'dutch_dictionary_big')
+    return set(load_artifact(dictionary_name)['word'])
 
 
-def create_trie_dictionary(
-        corpus: str = None, file_path: str = None) -> Trie:
-    if filepath:
-        corpus = open(file_path).read()
-    lang_dict = create_dictionary(corpus)
+def words_trie_dictionary(dictionary_name: str) -> Trie:
+    """
+        dictionary_name: str
+            Name of the dictionary file to load words from.
+            Available word dictionaries:
+                1. english_dictionary_small
+                2. english_dictionary_big
+                3. dutch_dictionary_small
+                4. dutch_dictionary_big
+    """
+    assert dictionary_name in (
+        'english_dictionary_small', 'english_dictionary_big',
+        'dutch_dictionary_small', 'dutch_dictionary_big')
     model = Trie()
-    model.addAll(({'word': word, 'count': count}
-                  for word, count in lang_dict.items()))
+    model.addAll(load_artifact(dictionary_name)['word'])
     return model
 
 
-def words_dictionary_filepath(
-        lang: str = 'en', size: str = '50k') -> str:
-    """
-        lang: str, default='en'
-            Currently only English (en) / Dutch (nl) supported.
-        size: str, default='50k'
-            Use the small dictionary containing only top '50k'
-            words or 'full' dictionary. Full dictionary is very large
-            and can result in large running times.
-    """
-    return join(
-        DATA_DIR, 'dictionaries', lang, '{}_{}.txt'.format(lang, size))
-
-
-def words_dictionary_trie_filepath(
-        lang: str = 'en', size: str = '50k') -> str:
-    """
-        lang: str, default='en'
-            Currently only English (en) / Dutch (nl) supported.
-        size: str, default='50k'
-            Use the small dictionary containing only top '50k'
-            words or 'full' dictionary. Full dictionary is very large
-            and can result in large running times.
-    """
-    return join(
-        DATA_DIR, 'dictionaries', lang, '{}_{}_trie'.format(lang, size))
-
-
-def words_set_dictionary(
-        lang: str = 'en', size: str = '50k') -> set:
-    """
-        lang: str, default='en'
-            Currently only English (en) / Dutch (nl) supported.
-        size: str, default='50k'
-            Use the small dictionary containing only top '50k'
-            words or 'full' dictionary. Full dictionary is very large
-            and can result in large running times.
-    """
-    return create_dictionary_from_csv(words_dictionary_filepath(lang, size))
-
-
-def words_trie_dictionary(
-        lang: str = 'en', size: str = '50k') -> Trie:
-    """
-        lang: str, default='en'
-            Currently only English (en) / Dutch (nl) supported.
-        size: str, default='50k'
-            Use the small dictionary containing only top '50k'
-            words or 'full' dictionary. Full dictionary is very large
-            and can result in large running times.
-    """
-    return create_trie_dictionary_from_csv(
-        words_dictionary_filepath(lang, size), header='include')
-
-
-def cleanhtml(raw_html: str) -> str:
+def clean_html(raw_html: str) -> str:
     assert isinstance(raw_html, str), '{} must be a string'.format(raw_html)
     cleanr = re.compile('<.*?>')
     cleantext = re.sub(cleanr, '', raw_html)
@@ -193,10 +143,11 @@ def edit_dist(word: str, dist: int = 2) -> tuple:
 
 def cluster_words_by_edit_distance1(
         words: Iterable[str], dist: int = 2) -> dict:
-    assert isinstance(words, (list, tuple)) and any(isinstance(w, str)
-        for w in words), 'words must be an iterable of strings'
+    assert isinstance(words, (list, tuple))
+    assert any(isinstance(w, str) for w in words), 'words must be an iterable of strings'
     assert isinstance(dist, int)
     cluster = dict()
+    import distance
     for i, w in enumerate(words):
         x = [words[j] for j in range(
             i + 1, len(words)) if distance.levenshtein(w, words[j]) == dist]
@@ -223,7 +174,7 @@ def cluster_words_by_edit_distance2(
 
     # Compute word clusters with affinity propagation
     # using edit distance similarity between words as input.
-    from ..cluster.affinity_propagation import ap_precomputed
+    from python_data_utils.cluster.affinity_propagation import ap_precomputed
     return ap_precomputed(words, lev_similarity, verbose, **kwargs)
 
 
@@ -477,7 +428,7 @@ def KNNNameMatching(
     else:
         indices, distances = neigh.kneighbors(Xb)
         indices, distances = indices.flatten(), distances.flatten()
-        indices = indices[distance <= max_distance]
+        indices = indices[distances <= max_distance]
 
     if return_B:
         result = [(B[i], A[idx]) for i, idx in enumerate(indices)]
