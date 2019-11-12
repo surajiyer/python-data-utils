@@ -13,11 +13,14 @@ __all__ = ['GibberishDetectorClassifier']
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils.validation import check_is_fitted
 import numpy as np
+from typing import Iterable, Any
 
 
 class GibberishDetectorClassifier(BaseEstimator, ClassifierMixin):
 
-    def __init__(self, accepted_chars='abcdefghijklmnopqrstuvwxyz ', smoothing_factor=10):
+    def __init__(
+            self, accepted_chars: str = 'abcdefghijklmnopqrstuvwxyz ',
+            smoothing_factor: int = 10):
         self.accepted_chars = accepted_chars
         self.smoothing_factor = smoothing_factor
 
@@ -29,22 +32,22 @@ class GibberishDetectorClassifier(BaseEstimator, ClassifierMixin):
         return self._accepted_chars
 
     @accepted_chars.setter
-    def accepted_chars(self, value):
+    def accepted_chars(self, value: str):
         self._accepted_chars = value
         self._pos = dict([(char, idx) for idx, char in enumerate(value)])
 
-    def _normalize(self, line):
+    def _normalize(self, line: str) -> list:
         """ Return only the subset of chars from accepted_chars.
         This helps keep the  model relatively small by ignoring punctuation, infrequent symbols, etc. """
         return [c.lower() for c in line if c.lower() in self.accepted_chars]
 
-    def _ngram(self, n, line):
+    def _ngram(self, n: int, line: str) -> Iterable[str]:
         """ Return all n grams from line after normalizing """
         filtered = self._normalize(line)
         for start in range(0, len(filtered) - n + 1):
             yield ''.join(filtered[start:start + n])
 
-    def fit(self, X, y=None):
+    def fit(self, X: Iterable[str], y: Any = None):
         """ Write a simple model as a pickle file """
         k = len(self._accepted_chars)
 
@@ -74,7 +77,7 @@ class GibberishDetectorClassifier(BaseEstimator, ClassifierMixin):
 
         return self
 
-    def _avg_transition_prob(self, line):
+    def _avg_transition_prob(self, line: str) -> float:
         """ Return the average transition probability of line with the log probability matrix. """
         log_prob = 0.0
         transition_ct = 0
@@ -86,39 +89,10 @@ class GibberishDetectorClassifier(BaseEstimator, ClassifierMixin):
         # The exponentiation translates from log probability to regular probability.
         return np.exp(log_prob / (transition_ct or 1))
 
-    def predict_proba(self, X):
+    def predict_proba(self, X: Iterable[str]) -> Iterable[float]:
         check_is_fitted(self, '_log_prob_mat')
         return np.array([self._avg_transition_prob(x) for x in X])
 
-    def predict(self, X, threshold):
+    def predict(self, X: Iterable[str], threshold: float) -> Iterable[int]:
         # if the transition probability is lower than threshold, its gibberish, i.e., return 1 else 0
         return (self.predict_proba(X) < threshold) * 1
-
-
-if __name__ == '__main__':
-    import utils
-
-    # load words
-    words = utils.create_dictionary_from_csv(utils.words_dictionary_filepath(lang="nl"), header=True, delimiter=" ")
-
-    # pad words with spaces to create transition probability between alphabets and spaces
-    words = [' ' + w + ' ' for w in words]
-
-    gb = GibberishDetectorClassifier()
-    gb.fit(words)
-
-    good_words = ['natuurlijk', 'fijnavond', 'smaakelijk', 'telefoon']
-    bad_words = ['adaefgr', 'efsgtb rdrfw', 'afrvd telefoon', 'nietzogood']
-
-    # Find the probability of generating a few arbitrarily chosen good and
-    # bad phrases.
-    good_probs = gb.predict_proba(good_words)
-    bad_probs = gb.predict_proba(bad_words)
-    print(good_probs, bad_probs)
-
-    # Assert that we actually are capable of detecting the junk.
-    assert min(good_probs) > max(bad_probs)
-
-    # And pick a threshold halfway between the worst good and best bad inputs.
-    thresh = (min(good_probs) + max(bad_probs)) / 2
-    print(thresh)  # threshold = 0.0584
