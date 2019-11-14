@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 import shutil
-from .. import utils as pyu
+import python_data_utils.utils as pyu
 
 
 def test_load_dataset_1():

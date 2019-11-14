@@ -1,4 +1,4 @@
-from .. import utils as npu
+import python_data_utils.numpy.utils as npu
 
 
 def test_create_upper_matrix():
