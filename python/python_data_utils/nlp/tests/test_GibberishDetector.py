@@ -7,7 +7,6 @@ def test_1():
     words = utils.words_set_dictionary('dutch_dictionary_small')
 
     # pad words with spaces to create transition probability between alphabets and spaces
-    print(next(w for w in words if isinstance(w, float)))
     words = [f' {str(w)} ' for w in words]
 
     gb = GibberishDetectorClassifier()
