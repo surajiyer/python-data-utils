@@ -1,5 +1,5 @@
-from ..GibberishDetector import GibberishDetectorClassifier
-from .. import utils
+from python_data_utils.nlp.GibberishDetector import GibberishDetectorClassifier
+from python_data_utils.nlp import utils
 
 
 def test_1():
@@ -7,7 +7,7 @@ def test_1():
     words = utils.words_set_dictionary('dutch_dictionary_small')
 
     # pad words with spaces to create transition probability between alphabets and spaces
-    words = [' ' + w + ' ' for w in words]
+    words = [f' {str(w)} ' for w in words]
 
     gb = GibberishDetectorClassifier()
     gb.fit(words)

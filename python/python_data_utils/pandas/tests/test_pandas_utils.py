@@ -1,4 +1,4 @@
-from .. import utils as pdu
+import python_data_utils.pandas.utils as pdu
 
 
 def test_df_mem_usage():
