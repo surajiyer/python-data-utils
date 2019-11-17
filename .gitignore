@@ -1,4 +1,19 @@
+# pycharm artifacts
 .idea
+
+# cache folders
 .ipynb_checkpoints
 __pycache__
 .pytest_cache
+.mypy_cache
+
+# Compiled python modules.
+*.pyc
+
+# Setuptools distribution folder.
+/dist/
+/build/
+
+# Python egg metadata, regenerated from source files by setuptools.
+*.egg-info
+*.egg
