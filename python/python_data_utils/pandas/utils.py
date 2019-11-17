@@ -898,7 +898,7 @@ def feature_select_correlation(df, threshold=.5):
 
 def mahalanobis_distance(df):
     cov_matrix = np.cov(df)
-    from . import numpy_utils as npu
+    import python_data_utils.numpy.utils as npu
     if npu.is_pos_def(cov_matrix):
         inv_cov_matrix = np.linalg.inv(cov_matrix)
         if npu.is_pos_def(inv_cov_matrix):
