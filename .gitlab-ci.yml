@@ -1,0 +1,16 @@
+image: "python:3.7"
+
+before_script:
+  - pip install numpy
+  - pip install .
+
+stages:
+  - Test
+
+unit_test:
+  stage: Test
+  script:
+    - cd python
+    - pytest
+#  only:
+#    - master
