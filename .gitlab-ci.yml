@@ -10,7 +10,6 @@ stages:
 unit_test:
   stage: Test
   script:
-    - cd python
     - pytest
-#  only:
-#    - master
+  only:
+    - merge_requests
