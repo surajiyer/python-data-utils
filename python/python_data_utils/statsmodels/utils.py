@@ -18,7 +18,7 @@ import re
 
 
 def logit_evaluation_summary(results, labels, pos=1, neg=0):
-    from scoring import *
+    from .scoring import tjur_r2, squared_pearson_correlation_r2, sum_of_squares_r2
     return pd.DataFrame([
         ('Pseudo R-squared', results.prsquared),
         ('Tjur R-squared', tjur_r2(results, labels, pos, neg)),
