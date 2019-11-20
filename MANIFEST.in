@@ -1,0 +1,3 @@
+include README.md
+graft python/python_data_utils/conf
+prune python/python_data_utils/data

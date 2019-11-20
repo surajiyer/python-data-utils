@@ -2,12 +2,14 @@ import pandas as pd
 import os
 import shutil
 import python_data_utils.utils as pyu
+import importlib.resources as pkg_resources
 
 
 def test_load_dataset_1():
     # test basic loading of existing file from cache directory
-    data = pyu.load_artifact('dutch_dictionary_small',
-                             os.path.join(__file__, '..', '..'))
+    with pkg_resources.path('python_data_utils', '__init__.py') as p:
+        path = os.path.split(p)[0]
+    data = pyu.load_artifact('dutch_dictionary_small', path)
     assert isinstance(data, pd.DataFrame)
     assert data.columns.tolist() == ['word', 'count']
     assert data.shape == (50000, 2)

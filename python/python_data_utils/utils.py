@@ -21,11 +21,13 @@ import shutil
 import pandas as pd
 from typing import Any
 import os
+import importlib.resources as pkg_resources
 
 
 def _load_catalog():
-    with open(os.path.join(__file__, '..', 'conf', "catalog.yml")) as stream:
-        return yaml.safe_load(stream)
+    with pkg_resources.path('python_data_utils.conf', 'catalog.yml') as p:
+        with open(p) as stream:
+            return yaml.safe_load(stream)
 
 
 def get_catalog():
@@ -39,9 +41,10 @@ def fix_path(path: str) -> str:
 
 
 # Load default cache dir
-with open(os.path.join(__file__, '..', 'conf', "basic.yml")) as stream:
-    _DEFAULT_CACHE_DIR = fix_path(
-        yaml.safe_load(stream)['default_cache_dir'])
+with pkg_resources.path('python_data_utils.conf', 'basic.yml') as p:
+    with open(p) as stream:
+        _DEFAULT_CACHE_DIR = fix_path(
+            yaml.safe_load(stream)['default_cache_dir'])
 
 # Load dataset catalog
 _catalog = _load_catalog()

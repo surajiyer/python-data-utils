@@ -17,7 +17,7 @@ __all__ = [
 
 import pandas as pd
 import time
-from python_data_utils.numpy import utils as npu
+import python_data_utils.numpy.utils as npu
 from scipy.spatial import distance
 import numpy as np
 from typing import Tuple
