@@ -1,5 +1,14 @@
 from setuptools import setup, find_packages
-from python_data_utils import __version__
+try:
+    import builtins
+except ImportError:
+    # Python 2 compat: just to be able to declare that Python >=3.5 is needed.
+    import __builtin__ as builtins
+builtins.__PYDU_SETUP__ = True
+
+# We can actually import a restricted version of python_data_utils that
+# does not need the compiled code
+from python.python_data_utils import __version__
 
 
 install_requires = [
