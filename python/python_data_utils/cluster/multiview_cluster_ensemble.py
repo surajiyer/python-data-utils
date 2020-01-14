@@ -136,7 +136,7 @@ def aggregate_matrices(
 
 def multiview_ensemble_similarity(
         partitions, *similarity_matrices,
-        affinity_c=.1, verbose=True) -> Tuple(np.ndarray, np.ndarray, np.ndarray, np.ndarray):
+        affinity_c=.1, verbose=True) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     if verbose:
         print("Creating cluster-based similarity matrix.")
         start = time.time()
