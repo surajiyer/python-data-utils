@@ -567,3 +567,4 @@ class RegexPattern:
     ThreePlusRepeatingCharacters = r"([a-z])\1{2,}"
     ApostropheWords = r"[\w]+['][\w]+(['][\w]+)?"
     MD5 = r"[a-fA-F0-9]{32}"
+    GoogleKeywordsFromURL = r'(?:(?<=q=|\+)([^$"+#&,]+)(?!.*q=))'
