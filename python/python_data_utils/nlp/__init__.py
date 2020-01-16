@@ -5,4 +5,12 @@
     author: Suraj Iyer
 """
 
-__all__ = ['spell_checking', 'utils', 'trie', 'GibberishDetector', 'WebTextScraper']
+__all__ = [
+    'gibberish_detector',
+    'keyphrase_extraction',
+    'regex_patterns',
+    'spell_checking',
+    'trie',
+    'utils',
+    'web_text_scraper'
+]

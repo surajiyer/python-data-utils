@@ -23,12 +23,10 @@ __all__ = [
     'correct_word_compounding',
     'tf_idf',
     'replace_contractions',
-    'KNNNameMatching',
+    'knn_name_matching',
     'bigram_context',
     'cluster_urls',
-    'corpus_level_tfidf',
-    'foreground_keywords_extraction',
-    'RegexPattern'
+    'corpus_level_tfidf'
 ]
 
 import numpy as np
@@ -405,7 +403,7 @@ def replace_contractions(
     return c_re.sub(replace, text)
 
 
-def KNNNameMatching(
+def knn_name_matching(
         A: Iterable[str], B: Iterable[str],
         vectorizer_kws: dict = {}, nn_kws: dict = {},
         max_distance: float = None, return_B=True) -> list:
@@ -516,55 +514,3 @@ def corpus_level_tfidf(
             len(texts) / (1. + idf_vect.fit_transform(texts).sum(0))
         )).reshape(-1)
         return tf * idf, terms
-
-
-def foreground_keywords_extraction(
-        D_f: Iterable[str], D_b: Iterable[str],
-        **vectorizer_kwargs) -> Iterable[str]:
-    """
-    Keyphrase extraction by contrasting foreground and background
-    aggregated tf-idf weights of terms to enable context awareness.
-
-    See paper: Ziegler, C.N., Skubacz, M. and Viermetz, M., 2008, December.
-    Mining and exploring unstructured customer feedback data using language
-    models and treemap visualizations. In 2008 IEEE/WIC/ACM International
-    Conference on Web Intelligence and Intelligent Agent Technology (Vol. 1,
-    pp. 932-937). http://www2.informatik.uni-freiburg.de/~cziegler/papers/WI-08-CR.pdf
-    """
-    # TODO: the extracted keywords are NOT good quality, needs more improvement
-    weights_f, terms_f = corpus_level_tfidf(D_f, **vectorizer_kwargs)
-    vectorizer_kwargs.update({'vocabulary': terms_f})
-    weights_b, _ = corpus_level_tfidf(D_b, **vectorizer_kwargs)
-    W = (weights_f / weights_b) * np.log(weights_f + weights_b)
-
-    # if a term occurs in the foreground corpus but not in the background,
-    # then the term weight becomes +infinity. This does not give useful
-    # information about how to order the terms based on their importance,
-    # so we fall back to using its foreground weights only in this case.
-    mask = np.isposinf(W)
-    W[mask] = weights_f[mask]
-
-    # print('\n'.join([str(x) for x in list(zip(terms_f, W, weights_f, weights_b))]))
-    return np.array(terms_f)[np.argsort(-W)]
-
-
-class RegexPattern:
-    WholeWordOnly = lambda w: r'\b{}\b'.format(w)
-    Linebreak = r'\r+|\n+'
-    Number = WholeWordOnly(r"[0-9]+([.,][0-9]+)?")
-    TwoOrMoreSpaces = r'\s{2,}'
-    Email = WholeWordOnly(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
-    NL_pc4 = WholeWordOnly(r'[0-9]{4}\s?\w{2}')
-    SingleCharacterWord = WholeWordOnly(r'\w')
-    TimeOfDay = r"([0[0-9]|1[0-9]|2[0-3]):[0-5][0-9](\s?a[.]?m[.]?|p[.]?m[.]?|A[.]?M[.]?|P[.]?M[.]?)?"
-    Unicode = r"[^\x00-\x7F]"
-    Quotes = lambda x: r"(\"{0}\"|\'{0}\')".format(x)
-    URL = r'(http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?'
-    SpecialCharacters = r'[`!@#*-+{}\[\]:;\'"|\\,<>\/]'
-    NumbersWithSuffix = r'[0-9]+(st|th|nd|rd)'
-    VersionNumber3N = r"\b(\d+\.)?(\d+\.)?(\*|\d+)\b"
-    Copyright = r"\(c\)|®|©|™"
-    ThreePlusRepeatingCharacters = r"([a-z])\1{2,}"
-    ApostropheWords = r"[\w]+['][\w]+(['][\w]+)?"
-    MD5 = r"[a-fA-F0-9]{32}"
-    GoogleKeywordsFromURL = r'(?:(?<=q=|\+)([^$"+#&,]+)(?!.*q=))'

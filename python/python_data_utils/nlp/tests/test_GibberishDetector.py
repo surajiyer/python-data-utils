@@ -1,4 +1,4 @@
-from python_data_utils.nlp.GibberishDetector import GibberishDetectorClassifier
+from python_data_utils.nlp.gibberish_detector import GibberishDetectorClassifier
 from python_data_utils.nlp import utils
 
 
