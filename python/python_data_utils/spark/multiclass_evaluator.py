@@ -9,6 +9,7 @@ class MulticlassEvaluator(Evaluator):
                  labelCol="label", **metricParams):
         assert metricName in [m for m in dir(MulticlassMetrics) if not m.startswith('__') and m != 'call'],\
             f'Unsupported metric: {metricName}'
+        uid = self._randomUID()
         params = locals()
         del params['self']
         self.__dict__ = params

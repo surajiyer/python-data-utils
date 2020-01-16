@@ -20,4 +20,4 @@ except NameError:
 if __PYDU_SETUP__:
     sys.stderr.write('Partial import of python_data_utils during the build process.\n')
 else:
-    from . import decorator
+    from . import decorators
