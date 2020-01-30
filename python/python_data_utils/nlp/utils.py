@@ -10,8 +10,6 @@ __all__ = [
     'create_dictionary',
     'words_set_dictionary',
     'words_trie_dictionary',
-    'clean_html',
-    'reduce_lengthening',
     'edits_1',
     'edits_2',
     '_edit_dist',
@@ -26,17 +24,19 @@ __all__ = [
     'knn_name_matching',
     'bigram_context',
     'cluster_urls',
-    'corpus_level_tfidf'
+    'corpus_level_tfidf',
+    'extract_phrases'
 ]
 
 import numpy as np
 import pandas as pd
 import re
-from collections import Counter
+from collections import Counter, defaultdict
 import nltk
 from .trie import *
 from .contractions import *
 from python_data_utils.utils import load_artifact
+import difflib
 from typing import Iterable, Tuple
 
 
@@ -86,20 +86,6 @@ def words_trie_dictionary(dictionary_name: str) -> Trie:
     model = Trie()
     model.addAll(load_artifact(dictionary_name)['word'])
     return model
-
-
-def clean_html(raw_html: str) -> str:
-    assert isinstance(raw_html, str), '{} must be a string'.format(raw_html)
-    cleanr = re.compile('<.*?>')
-    cleantext = re.sub(cleanr, '', raw_html)
-    return cleantext
-
-
-def reduce_lengthening(text: str) -> str:
-    """Correcting more than twice repeated characters in words."""
-    assert isinstance(text, str), '{} must be a string'.format(text)
-    pattern = re.compile(r"(.)\1{2,}")
-    return pattern.sub(r"\1\1", text)
 
 
 def edits_1(word: str) -> set:
@@ -514,3 +500,32 @@ def corpus_level_tfidf(
             len(texts) / (1. + idf_vect.fit_transform(texts).sum(0))
         )).reshape(-1)
         return tf * idf, terms
+
+
+def extract_phrases(
+        list_of_strings: Iterable[str], min_phrase_length: int = 2,
+        max_phrase_length: int = float("inf"), min_freq: int = 1,
+        delimiter: str = "||") -> dict:
+    N = len(list_of_strings)
+    assert N > 0
+    phrases = defaultdict(int)
+    string = list_of_strings[0]
+    if N == 1:
+        phrases[string] = 1
+    else:
+        for i in range(1, len(list_of_strings)):
+            matches = difflib\
+                .SequenceMatcher(None, list_of_strings[i], string)\
+                .get_matching_blocks()[:-1]
+            string += delimiter
+            end = 0
+            for match in matches:
+                string += " " + list_of_strings[i][end:match.a]
+                end = match.a + match.size
+                phrases[list_of_strings[i][match.a:end]] += 1
+            string += " " + list_of_strings[i][end:]
+    phrases = {
+        k: v for k, v in map(lambda i: (i[0].strip(), i[1]), phrases.items())
+        if (v >= min_freq) and
+        (min_phrase_length <= len(k) <= max_phrase_length)}
+    return phrases

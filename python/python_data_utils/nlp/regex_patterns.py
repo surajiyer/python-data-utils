@@ -29,3 +29,5 @@ class RegexPattern:
     ApostropheWords = r"[\w]+['][\w]+(['][\w]+)?"
     MD5 = r"[a-fA-F0-9]{32}"
     GoogleKeywordsFromURL = r'(?:(?<=q=|\+)([^$"+#&,]+)(?!.*q=))'
+    HTMLTags = r"<.*?>"
+    GreaterThanTwiceRepeated = r"(.)\1{2,}"
