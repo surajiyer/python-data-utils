@@ -7,7 +7,7 @@
 
 __all__ = ['KeyphraseExtraction']
 
-import utils as nlpu
+import python_data_utils.nlp.utils as nlpu
 import numpy as np
 from typing import Iterable
 
