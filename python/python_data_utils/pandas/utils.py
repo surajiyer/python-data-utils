@@ -6,6 +6,7 @@
 """
 
 __all__ = [
+    'apply_parallel',
     'df_mem_usage',
     'optimize_dataframe',
     'tsv_to_pandas_generator',
@@ -51,14 +52,56 @@ __all__ = [
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from multiprocessing import Pool
 # from imblearn.over_sampling import smote
 
-plt.style.use('seaborn')  # pretty matplotlib plots
-# plt.rc('font', size=12)
-# plt.rc('figure', titlesize=18)
-# plt.rc('axes', labelsize=15)
-# plt.rc('axes', titlesize=18)
-# plt.rc('figure', autolayout=True)
+
+def apply_parallel(df, func, axis=0, n_processes=4, mode=0):
+    """
+    Apply function on dataframe in parallel.
+
+    :param df: Dataframe
+    :param func: function
+        function to apply
+    :param axis: 0/1
+        Axis has to be 0 (row index) or 1 (column index)
+    :param n_processes: positive int
+    :param mode: 0/1
+        Mode is 0 (faster but consumes more memory)
+        or 1 (slower but might consume less memory)
+    """
+    # Initialize some temporary global variables
+    # Multiprocessing library can only copy globals to forked processes
+    if mode == 1:
+        global _apply_parallel_df, _apply_parallel_func, _apply_parallel_wrapper
+        _apply_parallel_df = df
+        _apply_parallel_func = func
+        if axis == 0:
+            def _apply_parallel_wrapper(indices):
+                global _apply_parallel_df
+                return _apply_parallel_func(_apply_parallel_df.iloc[indices])
+        elif axis == 1:
+            def _apply_parallel_wrapper(indices):
+                global _apply_parallel_df
+                return _apply_parallel_func(_apply_parallel_df.iloc[:, indices])
+        else:
+            raise ValueError('Axis has to be 0 (row index) or 1 (column index).')
+
+        # Apply the function parallely
+        df_split = np.array_split(np.arange(df.shape[axis]), n_processes)
+        with Pool(n_processes) as pool:
+            df = pd.concat(pool.map(_apply_parallel_wrapper, df_split), axis=axis)
+
+        # Delete the temporary global variables
+        del _apply_parallel_df, _apply_parallel_func, _apply_parallel_wrapper
+    elif mode == 0:
+        df_split = pd.np.array_split(df, n_processes)
+        with Pool(n_processes) as pool:
+            df = pd.concat(pool.map(func, df_split))
+    else:
+        raise ValueError('Mode has to be 0/1.')
+
+    return df
 
 
 def df_mem_usage(df):
@@ -577,7 +620,8 @@ def balanced_sampling(df_minority, df_majority, minority_upsampling_ratio=0.2,
     # upsample the minority class to the new size
     from sklearn.utils import resample
     if use_smote_upsampling:
-        pass  # smote.SMOTE(kind='borderline1').fit_sample()
+        # smote.SMOTE(kind='borderline1').fit_sample()
+        raise NotImplementedError()
     else:
         df_minority = resample(df_minority, replace=True,
                                n_samples=new_size, random_state=0)
