@@ -69,7 +69,13 @@ def load_from_url(url: str, save_path: str):
 
     # Download the file
     print(f'Downloading file from {url}.')
-    urllib.request.urlretrieve(url, save_path, reporthook=dl_progress)
+    try:
+        urllib.request.urlretrieve(url, save_path, reporthook=dl_progress)
+    except:
+        print(
+            'Unable to download file. Please download ',
+            'manually from the URL above and place it in ',
+            f'the following path {save_path}.')
 
     # Close progressbar
     pbar.finish()
