@@ -29,7 +29,8 @@ install_requires = [
     'hdbscan',
     'scipy',
     'beautifulsoup4',
-    'statsmodels'
+    'statsmodels',
+    'openpyxl'
 ]
 test_requirements = ['pytest']
 
