@@ -35,10 +35,9 @@ install_requires = [
 ]
 test_requirements = ['pytest']
 
-
 setup(
     name='python_data_utils',
-    package_dir={'': './python'},
+    package_dir={'': 'python'},
     version=__version__,
     author='Suraj Iyer',
     author_email='iyer.suraj@outlook.com',

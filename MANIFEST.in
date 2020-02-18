@@ -1,4 +1,3 @@
-include README.md
-recursive-include test *.py
-graft python/python_data_utils/conf
-prune python/python_data_utils/data
+global-include tests/*
+include python/python_data_utils/conf/*
+exclude python/python_data_utils/data/*
