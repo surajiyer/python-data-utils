@@ -12,8 +12,8 @@ from python.python_data_utils import __version__
 
 
 install_requires = [
-    'numpy',
     'pandas',
+    'numpy',
     'matplotlib',
     'dill',
     'progressbar2',
@@ -30,7 +30,8 @@ install_requires = [
     'scipy',
     'beautifulsoup4',
     'statsmodels',
-    'openpyxl'
+    'openpyxl',
+    'pyyaml'
 ]
 test_requirements = ['pytest']
 
