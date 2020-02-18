@@ -46,7 +46,7 @@ setup(
     long_description=open('README.md', encoding='utf-8').read(),
     url='https://github.com/surajiyer/python-data-utils',
     license='Apache 2.0',
-    packages=find_packages('python'),  # include all packages under 'python'
+    packages=find_packages('python', exclude=('tests*',)),  # include all packages under 'python'
     install_requires=install_requires,
     test_requires=test_requirements,
     zip_safe=True,
