@@ -12,7 +12,7 @@ from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.ml.param.shared import HasInputCols
 from pyspark.sql import Column, DataFrame
 
-from .base_params import BaseParams
+from python_data_utils.spark.utils import BaseParams
 
 
 def with_meta(self, alias, meta):
