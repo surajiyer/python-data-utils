@@ -43,7 +43,7 @@ class BaseModel:
         raise NotImplementedError()
 
     @verify_best_model
-    def test(self, df: DataFrame) -> DataFrame, dict:
+    def test(self, df: DataFrame) -> Tuple[DataFrame, dict]:
         """
         return:
             test_predictions: DataFrame
