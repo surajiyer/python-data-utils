@@ -5,12 +5,28 @@
     author: Suraj Iyer
 """
 
-__all__ = ['melt', 'one_hot_encode']
+__all__ = [
+    'empty_df'
+    , 'melt'
+    , 'one_hot_encode'
+    , 'CustomParamsWriter'
+    , 'CustomParamsWritable'
+    , 'CustomTypeConverters']
 
 import pyspark.sql.functions as F
 from pyspark.sql import DataFrame
+from pyspark.sql.types import IntegerType, StructType
+from pyspark.ml.util import DefaultParamsWriter, MLWritable
+from pyspark.ml.param import TypeConverters
+import pandas as pd
+from dateutil.parser import parse
+import datetime as dt
 from typing import Iterable, Tuple
-from pyspark.sql.types import IntegerType
+
+
+def empty_df(spark):
+    schema = StructType([])
+    return spark.createDataFrame(spark.sparkContext.emptyRDD(), schema)
 
 
 def melt(
@@ -54,3 +70,50 @@ def one_hot_encode(
         df = df.withColumn(new_column_name, function(F.col(column_name)))
         columns.append(new_column_name)
     return df, tuple(columns)
+
+
+class CustomParamsWriter(DefaultParamsWriter):
+    def saveImpl(self, path):
+        params = self.instance.extractParamMap()
+        jsonParams = {}
+        for p in params:
+            if isinstance(params[p], pd.DataFrame):
+                jsonParams[p.name] = params[p].to_json()
+            elif isinstance(params[p], dt.datetime):
+                jsonParams[p.name] = str(params[p])
+            else:
+                jsonParams[p.name] = params[p]
+        DefaultParamsWriter.saveMetadata(
+            self.instance, path, self.sc, paramMap=jsonParams)
+
+
+class CustomParamsWritable(MLWritable):
+    def write(self):
+        from pyspark.ml.param import Params
+
+        if isinstance(self, Params):
+            return CustomParamsWriter(self)
+        else:
+            raise TypeError("Cannot use CustomParamsWritable with type %s because it does not " +
+                            " extend Params.", type(self))
+
+
+class CustomTypeConverters(TypeConverters):
+
+    @staticmethod
+    def JSONtoPandas(value):
+        if isinstance(value, pd.DataFrame):
+            return value
+        elif isinstance(value, str):
+            return pd.read_json(value)
+        else:
+            raise TypeError("pd.DataFrame Param requires value to be a JSON string (str). Found %s." % type(value))
+
+    @staticmethod
+    def toDate(value):
+        if isinstance(value, dt.datetime):
+            return value
+        elif isinstance(value, str):
+            return parse(value)
+        else:
+            raise TypeError("Datetime Param requires value of type datetime. Found %s." % type(value))

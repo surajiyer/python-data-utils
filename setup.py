@@ -31,6 +31,7 @@ install_requires = [
     'beautifulsoup4',
     'statsmodels',
     'openpyxl',
+    'pyspark>=2.4.0',
     'pyyaml'
 ]
 test_requirements = ['pytest']
