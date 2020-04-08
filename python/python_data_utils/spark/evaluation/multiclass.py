@@ -1,3 +1,4 @@
+# Multiclass Evaluator
 from pyspark.ml.evaluation import Evaluator
 from pyspark.mllib.evaluation import MulticlassMetrics
 from pyspark.sql.types import DoubleType
@@ -22,6 +23,9 @@ class MulticlassEvaluator(Evaluator):
             .rdd.map(tuple)
         return getattr(
             MulticlassMetrics(rdd), self.metricName)(**self.metricParams)
+
+    def getMetricName(self):
+        return self.metricName
 
     def isLargerBetter(self):
         return True
