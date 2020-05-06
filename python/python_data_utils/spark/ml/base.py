@@ -5,12 +5,13 @@ from pyspark.sql import DataFrame
 from pyspark.ml import Pipeline, PipelineModel
 from pyspark.ml.tuning import CrossValidatorModel
 from typing import Union, Tuple
+import json
 
 
 def verify_best_model(func):
     def wrapper(*args, **kwargs):
         self = args[0]
-        assert isinstance(self, BaseModel)
+        # assert isinstance(self, BaseModel)
         assert isinstance(self.best_model, PipelineModel),\
             'Call train() first.'
         assert isinstance(self.best_model.stages[-1], self.model_cls),\
@@ -31,7 +32,7 @@ class BaseModel:
         self.best_params = None
 
     def train(
-            self, df: DataFrame, param_maps: dict=None,
+            self, df: DataFrame, params_map: dict=None,
             return_cv: bool=False) -> Union[PipelineModel, Tuple[PipelineModel, CrossValidatorModel]]:
         """
         return:
@@ -74,17 +75,43 @@ class BaseModel:
         assert isinstance(model.stages[-1], self.model_cls),\
             f'The final stage of model must be of type {self.model_cls}.'
         self.best_model = model
-        self.best_params = {
-            k.name: getattr(model.stages[-1]._java_obj, 'get' + k.name[0].upper() + k.name[1:])()
-            for k in self._param_grid[0].keys()
-        }
+        # coalesce = lambda *x: next(y for y in x if y is not None)
+        if model.stages[-1]._java_obj.parent() is not None\
+            and self._params_map is not None:
+            self.best_params = {
+                k: getattr(
+                    model.stages[-1]._java_obj.parent()
+                    , 'get' + k[0].upper() + k[1:])()
+                for k in self._params_map.keys()
+            }
+        else:
+            self.best_params = None
         return self
 
     @verify_best_model
     def save(self, path: str):
         self.best_model.save(path)
+
+        # save additional model metadata
+        metadata = {}
+        if hasattr(self, 'best_params'):
+            metadata.update({'best_params': self.best_params})
+        if hasattr(self, 'features'):
+            metadata.update({'features': self.features})
+        with open(path + '/BaseModel_metadata', 'w') as fp:
+            json.dump(metadata, fp, separators=[',',  ':'])
+
         return self
 
     def load(self, path: str):
         self._set_best_model(PipelineModel.load(path))
+
+        # load additional model metadata
+        with open(path + '/BaseModel_metadata', 'r') as fp:
+            metadata = json.load(fp)
+        if 'best_params' in metadata:
+            self.best_params = metadata['best_params']
+        if 'features' in metadata:
+            self.features = metadata['features']
+
         return self
