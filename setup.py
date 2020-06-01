@@ -12,27 +12,13 @@ from python.python_data_utils import __version__
 
 
 install_requires = [
-    'pandas',
-    'numpy',
-    'matplotlib',
-    'dill',
-    'progressbar2',
-    'seaborn',
-    'ipython',
-    'ipywidgets',
-    'scikit-learn',
-    'nltk',
-    'distance',
-    'urlclustering',
-    'numba',
-    'fuzzywuzzy',
-    'hdbscan',
-    'scipy',
-    'beautifulsoup4',
-    'statsmodels',
-    'openpyxl',
-    'pyspark>=2.4.0',
-    'pyyaml'
+    'scipy', 'numpy', 'pandas', 'scikit-learn', 'statsmodels',
+    'matplotlib', 'seaborn',
+    'dill', 'progressbar2', 'numba', 'openpyxl', 'pyyaml',
+    'ipython', 'ipywidgets',
+    'nltk', 'distance', 'urlclustering', 'fuzzywuzzy', 'hdbscan',
+    'beautifulsoup4', 'requests', 'pyquery', 'fake-useragent', 'parse', 'w3lib', 'pyppeteer>=0.0.14',
+    'pyspark>=2.4.0'
 ]
 test_requirements = ['pytest']
 
