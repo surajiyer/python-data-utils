@@ -15,7 +15,7 @@ class RegexPattern:
     Number = WholeWordOnly(r"[0-9]+([.,][0-9]+)?")
     TwoOrMoreSpaces = r'\s{2,}'
     Email = WholeWordOnly(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
-    NL_pc4 = WholeWordOnly(r'[0-9]{4}\s?\w{2}')
+    NL_pc6 = WholeWordOnly(r'[0-9]{4}\s?[a-zA-Z]{2}')
     SingleCharacterWord = WholeWordOnly(r'\w')
     TimeOfDay = r"([0[0-9]|1[0-9]|2[0-3]):[0-5][0-9](\s?a[.]?m[.]?|p[.]?m[.]?|A[.]?M[.]?|P[.]?M[.]?)?"
     Unicode = r"[^\x00-\x7F]"
