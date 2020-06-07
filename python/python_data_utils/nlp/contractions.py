@@ -1,6 +1,5 @@
-__all__ = ['english_contractions', 'dutch_contractions']
-
-english_contractions = {
+contractions = dict()
+contractions['en'] = {
     "ain't": "am not",
     "aren't": "are not",
     "can't've": "cannot have",
@@ -120,8 +119,7 @@ english_contractions = {
     "you're": "you are",
     "you've": "you have"
 }
-
-dutch_contractions = {
+contractions['nl'] = {
     "m'n": "mijn",
     "z'n": "zijn",
     "zo'n": "zo een",

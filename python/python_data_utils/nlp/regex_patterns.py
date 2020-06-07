@@ -25,9 +25,9 @@ class RegexPattern:
     NumbersWithSuffix = r'[0-9]+(st|th|nd|rd)'
     VersionNumber3N = r"\b(\d+\.)?(\d+\.)?(\*|\d+)\b"
     Copyright = r"\(c\)|®|©|™"
-    ThreePlusRepeatingCharacters = r"([a-z])\1{2,}"
+    ThreePlusRepeatedAlpha = r"([a-z])\1{2,}"
+    ThreePlusRepeatedAny = r"(.)\1{2,}"
     ApostropheWords = r"[\w]+['][\w]+(['][\w]+)?"
     MD5 = r"[a-fA-F0-9]{32}"
     GoogleKeywordsFromURL = r'(?:(?<=q=|\+)([^$"+#&,]+)(?!.*q=))'
     HTMLTags = r"<.*?>"
-    GreaterThanTwiceRepeated = r"(.)\1{2,}"

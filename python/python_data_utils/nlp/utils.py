@@ -25,7 +25,8 @@ __all__ = [
     'bigram_context',
     'cluster_urls',
     'corpus_level_tfidf',
-    'extract_phrases'
+    'extract_phrases',
+    'remove_emojis'
 ]
 
 import numpy as np
@@ -34,7 +35,7 @@ import re
 from collections import Counter, defaultdict
 import nltk
 from .trie import *
-from .contractions import *
+from .contractions import contractions
 from python_data_utils.utils import load_artifact
 import difflib
 from typing import Iterable, Tuple
@@ -371,22 +372,18 @@ def tf_idf(documents: Iterable[str]) -> Tuple[dict, dict, dict]:
 
 def replace_contractions(
         text: str,
-        contractions: dict = english_contractions) -> str:
+        contractions: dict = contractions['en']) -> str:
     """
     Based on https://gist.github.com/nealrs/96342d8231b75cf4bb82
 
     :param:
         text: str
             Input text
-        contractions: dict (default=english_contractions)
+        contractions: dict (default=contractions['en'])
             Dictionary of contractions (key) and their expanded forms (value).
     """
-    c_re = re.compile(r'\b(%s)\b' % '|'.join(contractions.keys()))
-
-    def replace(match):
-        return contractions[match.group(0)]
-
-    return c_re.sub(replace, text)
+    p = re.compile(r'\b(%s)\b' % '|'.join(contractions.keys()))
+    return p.sub(lambda match: contractions[match.group(0)], text.lower())
 
 
 def knn_name_matching(
@@ -529,3 +526,8 @@ def extract_phrases(
         if (v >= min_freq) and
         (min_phrase_length <= len(k) <= max_phrase_length)}
     return phrases
+
+
+def remove_emojis(inputString):
+    # https://stackoverflow.com/questions/33404752/removing-emojis-from-a-string-in-python
+    return inputString.encode('ascii', 'ignore').decode('ascii')
