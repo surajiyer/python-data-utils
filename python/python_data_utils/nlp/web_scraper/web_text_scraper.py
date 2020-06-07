@@ -126,7 +126,7 @@ class WebTextScraper:
                 # avoid Document is Empty errors
                 if not r.content:
                     content = lambda: None
-                    content.html = "<html></html>"
+                    content.html = ""
                     js_render = False
                 else:
                     content = r.html
@@ -221,9 +221,25 @@ class WebTextScraper:
 
         while to_visit:
             for url in list(to_visit):
-                text = None
                 try:
+                    text = None
                     text = self.text_from_url(url=url, **html_body_from_urls_kws)
+                    yield url, text
+
+                    visited.add(url)
+                    to_visit.remove(url)
+
+                    if current_depth < search_depth:
+                        urls = self.urls_from_url(url=url)
+
+                        if not allow_fragments:
+                            urls = set(url.split('#')[0].split('?')[0] for url in urls)
+
+                        if not allowed_domains:
+                            to_visit |= set(url for url in urls if url not in visited)
+                        else:
+                            to_visit |= set(url for url in urls if url not in visited and any(
+                                domain in url for domain in allowed_domains))
                 except:
                     traceback.print_exc()
                     self.scraper_session = {
@@ -234,37 +250,9 @@ class WebTextScraper:
                         'allowed_domains': allowed_domains,
                         'allow_fragments': allow_fragments,
                         'html_body_from_urls_kws': html_body_from_urls_kws}
+                    yield url, None
                     return
-                finally:
-                    yield url, text
 
-                visited.add(url)
-                to_visit.remove(url)
-
-                if current_depth < search_depth:
-                    try:
-                        urls = self.urls_from_url(url=url)
-                    except:
-                        traceback.print_exc()
-                        self.scraper_session = {
-                            'to_visit': to_visit,
-                            'visited': visited,
-                            'current_depth': current_depth,
-                            'search_depth': search_depth,
-                            'allowed_domains': allowed_domains,
-                            'allow_fragments': allow_fragments,
-                            'html_body_from_urls_kws': html_body_from_urls_kws}
-                        yield url, None
-                        return
-
-                    if not allow_fragments:
-                        urls = set(url.split('#')[0].split('?')[0] for url in urls)
-
-                    if not allowed_domains:
-                        to_visit |= set(url for url in urls if url not in visited)
-                    else:
-                        to_visit |= set(url for url in urls if url not in visited and any(
-                            domain in url for domain in allowed_domains))
             current_depth += 1
 
         assert len(to_visit) == 0, 'Shit, this should not have happened.'
