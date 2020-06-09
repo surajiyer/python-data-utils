@@ -173,3 +173,31 @@ def generate_random_string(characters: str = None, N: int = 10) -> str:
     if characters is None:
         characters = string.ascii_uppercase + string.digits
     return ''.join(random.choice(characters) for _ in range(N))
+
+
+def make_archive(output_name, source_dir, destination=None, overwrite=False):
+    """
+    Convert :source_dir: to archive. Supported formats: zip, tar, gz, bz2
+    :param output_name: str
+        Output file name without path and with format after dot. e.g. 'src.zip'
+    :param source_dir: str
+        Path to directory to archive.
+    :param destination: str
+        Path to directory to save output. If not given, will save to
+        the parent of the source directory.
+    :param overwrite: bool
+        If True, overwrite the archive of same name at destination
+        else raises error.
+    """
+    name, format = output_name.split('.')
+    if not destination:
+        destination = os.path.split(source_dir)[0]
+    shutil.make_archive(name, format, source_dir)
+    try:
+        path = os.path.join(destination, f'{name}.{format}')
+        if overwrite and os.path.isfile(path):
+            os.remove(path)
+        shutil.move(f'{name}.{format}', destination)
+    except:
+        os.remove(f'{name}.{format}')
+        raise
