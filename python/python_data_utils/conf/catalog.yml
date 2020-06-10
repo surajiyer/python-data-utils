@@ -20,7 +20,7 @@ dutch_thousand_common_words:
   type: csv
   filepath: data/dictionaries/nl/1000MostCommonWords-nl.txt
   url: https://1000mostcommonwords.com/1000-most-common-dutch-words/
-  header: None
+  header:
 
 dutch_dictionary_small:
   type: csv
@@ -58,5 +58,18 @@ dutch_stopwords:
 
 dutch_subtlex:
   type: zip
+  filelist:
+    - type: 'csv'
+      filepath: 'Users/emmanuel/projects/frequencies/subtlex-nl/distribution/version1.3/SUBTLEX-NL.txt'
+      sep: '\t'
+      keep_default_na: False
   filepath: data/dictionaries/nl/SUBTLEX-NL.txt.zip
   url: http://crr.ugent.be/subtlex-nl/SUBTLEX-NL.txt.zip
+
+# dutch_wikipedia:
+#   type: xml.bz2
+#   filelist:
+#     - type: 'xml'
+#       filepath: 'nlwiki-latest-pages-articles.xml'
+#   filepath: data/corpus/nl/nlwiki-latest-pages-articles.xml.bz2
+#   url: https://dumps.wikimedia.org/nlwiki/latest/nlwiki-latest-pages-articles.xml.bz2

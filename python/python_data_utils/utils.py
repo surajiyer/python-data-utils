@@ -6,33 +6,24 @@
 """
 
 __all__ = [
-    'load_from_url',
-    'load_artifact',
+    'fix_path',
+    'set_default_cache_dir',
     'clear_cache',
     'get_catalog',
-    'generate_random_string'
+    'load_from_url',
+    'extract_nonexisting',
+    'load_artifact',
+    'generate_random_string',
+    'make_archive'
 ]
 
 import yaml
 import urllib.request
 import progressbar as pb
-import dill
 import shutil
-import pandas as pd
 from typing import Any
 import os
 import importlib.resources as pkg_resources
-
-
-def _load_catalog():
-    with pkg_resources.path('python_data_utils.conf', 'catalog.yml') as p:
-        with open(p) as stream:
-            return yaml.safe_load(stream)
-
-
-def get_catalog():
-    import copy
-    return copy.deepcopy(_catalog)
 
 
 def fix_path(path: str) -> str:
@@ -46,8 +37,33 @@ with pkg_resources.path('python_data_utils.conf', 'basic.yml') as p:
         _DEFAULT_CACHE_DIR = fix_path(
             yaml.safe_load(stream)['default_cache_dir'])
 
+
+def set_default_cache_dir(path: str) -> str:
+    global _DEFAULT_CACHE_DIR
+    assert isinstance(path, str)
+    _DEFAULT_CACHE_DIR = fix_path(path)
+
+
+def clear_cache(cache_dir: str = None):
+    if cache_dir is None:
+        cache_dir = _DEFAULT_CACHE_DIR
+    if os.path.isdir(cache_dir):
+        shutil.rmtree(cache_dir, ignore_errors=True)
+
+
+def _load_catalog():
+    with pkg_resources.path('python_data_utils.conf', 'catalog.yml') as p:
+        with open(p) as stream:
+            return yaml.safe_load(stream)
+
+
 # Load dataset catalog
 _catalog = _load_catalog()
+
+
+def get_catalog():
+    import copy
+    return copy.deepcopy(_catalog)
 
 
 def load_from_url(url: str, save_path: str):
@@ -81,12 +97,55 @@ def load_from_url(url: str, save_path: str):
     pbar.finish()
 
 
-def _load_file(path: str, file_type: str, configs: dict = None) -> Any:
+def extract_nonexisting(archive, target: str, file_type: str):
+    """
+    Extract only files not yet existing at the given directory path.
+    archive:
+        file pointer / reference to the zip, tar or tar.gz archive.
+    target: str
+        directory to extract files into.
+    file_type: str
+        file type of archive. Only supports zip, tar, or tar.gz.
+    """
+    if file_type == 'zip':
+        namelist = archive.namelist()
+    elif file_type in ('tar', 'gz'):
+        namelist = archive.getnames()
+    else:
+        raise ValueError(
+            f'Give file_type: {file_type}. Only supports zip, tar, or tar.gz.')
+    os.makedirs(target, exist_ok=True)
+    for name in namelist:
+        if not os.path.exists(os.path.join(target, name)):
+            archive.extract(name, path=target)
+
+
+def _load_archive(fp, path: str, configs: dict = dict()):
+    # Extract
+    extract_path = os.path.splitext(path)[0]
+    extract_nonexisting(fp, extract_path)
+
+    # Load extracted files from filelist
+    filelist = configs.pop('filelist', None)
+    results = []
+    if filelist is not None:
+        for f in filelist:
+            fpath = os.path.join(extract_path, f)
+            ftype = os.path.splitext(f)[1][1:]
+            results.append(_load_file(fpath, ftype))
+    return results
+
+
+def _load_file(path: str, file_type: str, configs: dict = dict()) -> Any:
+    if file_type in ('csv', 'xlsx', 'parquet'):
+        import pandas as pd
+
     # open file once cached
     if file_type == 'txt':
         with open(path, 'r', **configs) as f:
             data = f.read()
     elif file_type == "pkl":
+        import dill
         data = dill.load(path, **configs)
     elif file_type == 'csv':
         configs.pop('filepath_or_buffer', None)
@@ -97,6 +156,19 @@ def _load_file(path: str, file_type: str, configs: dict = None) -> Any:
     elif file_type == 'parquet':
         configs.pop('path', None)
         data = pd.read_parquet(path, **configs)
+    # elif file_type == 'xml.bz2':
+    #     from bz2 import BZ2File
+    #     from lxml import etree
+    #     data = etree.iterparse(BZ2File(path), events=("start", "end"))
+    elif file_type in ('zip', 'gz'):
+        from zipfile import ZipFile
+        with ZipFile(path, 'r') as f:
+            data = _load_archive(f, path)
+    elif file_type in ('tar', 'gz'):
+        import tarfile
+        mode = "r:gz" if file_type == "gz" else "r:"
+        with tarfile.open(path, mode) as f:
+            data = _load_archive(f, path)
     else:
         raise NotImplementedError('Unknown file type.')
 
@@ -125,8 +197,7 @@ def load_artifact(name: str, cache_dir: str = None) -> Any:
         cache_dir = fix_path(cache_dir)
 
     # if cache directory does not exist
-    if not os.path.isdir(cache_dir):
-        os.mkdir(cache_dir)
+    os.makedirs(cache_dir, exist_ok=True)
 
     # load data
     filepath = catalog[name].pop('filepath', None)
@@ -149,13 +220,6 @@ def load_artifact(name: str, cache_dir: str = None) -> Any:
         filepath = fix_path(os.path.join(cache_dir, filepath))
 
     return _load_file(filepath, filetype, catalog[name])
-
-
-def clear_cache(cache_dir: str = None):
-    if cache_dir is None:
-        cache_dir = _DEFAULT_CACHE_DIR
-    if os.path.isdir(cache_dir):
-        shutil.rmtree(cache_dir, ignore_errors=True)
 
 
 def generate_random_string(characters: str = None, N: int = 10) -> str:
