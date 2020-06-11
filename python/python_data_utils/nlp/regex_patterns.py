@@ -26,7 +26,7 @@ class RegexPattern:
     VersionNumber3N = r"\b(\d+\.)?(\d+\.)?(\*|\d+)\b"
     Copyright = r"\(c\)|®|©|™"
     ThreePlusRepeatedAlpha = r"([a-z])\1{2,}"
-    ThreePlusRepeatedAny = r"(.)\1{2,}"
+    ThreePlusRepeatedAny = r"([^\s])\1{2,}"
     ApostropheWords = r"[\w]+['][\w]+(['][\w]+)?"
     MD5 = r"[a-fA-F0-9]{32}"
     GoogleKeywordsFromURL = r'(?:(?<=q=|\+)([^$"+#&,]+)(?!.*q=))'
