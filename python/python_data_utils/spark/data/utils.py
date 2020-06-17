@@ -22,9 +22,9 @@ def empty_df(spark):
 
 
 def melt(
-        df: DataFrame,
+        df: DataFrame, *,
         id_vars: Iterable[str], value_vars: Iterable[str],
-        var_name: str="variable", value_name: str="value") -> DataFrame:
+        var_name: str = "variable", value_name: str = "value") -> DataFrame:
     """Convert :class:`DataFrame` from wide to long format."""
     # Create array<struct<variable: str, value: ...>>
     _vars_and_vals = F.array(*(
@@ -40,7 +40,7 @@ def melt(
 
 
 def one_hot_encode(
-        df: DataFrame,
+        df: DataFrame, *,
         column_name: str, prefix: str = None) -> Tuple[DataFrame, Tuple]:
     """
     :return df: DataFrame
