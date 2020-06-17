@@ -966,24 +966,23 @@ def outlier_detection_mahalanobis(df, threshold=2):
     return np.argwhere(np.logical_or(md >= up, md <= lo))[:, 0]
 
 
-def save_xls(list_dfs, xls_path, sheet_names=[], to_excel_kws={},
-             excelwriter_kws={}):
+def save_xls(save_path, excelwriter_kws={}, to_excel_kws={}, **sheets):
     """
     Save list of pandas dataframes to single excel with multiple sheets.
 
-    :param list_dfs:
-        List of pandas dataframes
-    :param xls_path:
+    :param save_path: str
         file save path
-    :param sheet_names: Optional
-        Sheet names for each dataframe
+    :param excelwriter_kws: Optional[Dict]
+        Argument for pd.ExcelWriter()
+    :param to_excel_kws: Optional[Dict]
+        Argument for pd.DataFrame.to_excel()
+    :param sheets: Dict[str, pd.DataFrame]
+        Mappping from sheet name to dataframe
     """
-    with pd.ExcelWriter(xls_path, **excelwriter_kws) as writer:
-        if sheet_names:
-            assert len(sheet_names) == len(list_dfs)
-            for n, df in enumerate(list_dfs):
-                df.to_excel(writer, sheet_names[n], **to_excel_kws)
-        else:
-            for n, df in enumerate(list_dfs):
-                df.to_excel(writer, 'sheet%s' % n, **to_excel_kws)
-        writer.save()
+    if sheets:
+        with pd.ExcelWriter(save_path, **excelwriter_kws) as writer:
+            for k, v in sheets.items():
+                v.to_excel(writer, k, **to_excel_kws)
+            writer.save()
+    else:
+        raise ValueError('No sheets passed.')
