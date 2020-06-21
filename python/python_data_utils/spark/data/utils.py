@@ -62,3 +62,22 @@ def one_hot_encode(
         df = df.withColumn(new_column_name, function(F.col(column_name)))
         columns.append(new_column_name)
     return df, tuple(columns)
+
+
+def explode_multiple(df: DataFrame, *array_col_names):
+    # https://stackoverflow.com/questions/59235308/explode-two-pyspark-arrays-and-keep-elements-from-same-positions
+    # tranform array1, array2 => [struct(element1, element2)]
+    assert len(array_col_names) > 0
+    assert all(c.split('.')[0] in df.columns for c in array_col_names)
+    elements = ", ".join([
+        f"{array_col_names[j]}[i] as element{j + 1}" for j in range(1, len(array_col_names))])
+    transform_expr = f"transform({array_col_names[0]}, (x, i) -> struct(x as element1, {elements}))"
+
+    # explode transformed arrays and extract values of element1 and element2
+    df = df.withColumn("merged_arrays", F.explode(F.expr(transform_expr)))
+    for i in range(len(array_col_names)):
+        df = df.withColumn(
+            f"element{i + 1}", F.col(f"merged_arrays.element{i + 1}"))
+
+    df = df.drop("merged_arrays")
+    return df
