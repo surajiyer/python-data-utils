@@ -81,3 +81,7 @@ def explode_multiple(df: DataFrame, *array_col_names):
 
     df = df.drop("merged_arrays")
     return df
+
+
+def count_per_partition(df: DataFrame):
+    return df.rdd.mapPartitions(lambda it: [sum(1 for _ in it)]).collect()

@@ -52,7 +52,6 @@ __all__ = [
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from multiprocessing import Pool
 # from imblearn.over_sampling import smote
 
 
@@ -72,6 +71,7 @@ def apply_parallel(df, func, axis=0, n_processes=4, mode=0):
     """
     # Initialize some temporary global variables
     # Multiprocessing library can only copy globals to forked processes
+    from multiprocessing import Pool
     if mode == 1:
         global _apply_parallel_df, _apply_parallel_func, _apply_parallel_wrapper
         _apply_parallel_df = df
