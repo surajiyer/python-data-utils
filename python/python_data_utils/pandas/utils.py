@@ -49,6 +49,10 @@ __all__ = [
     'save_xls'
 ]
 
+
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
