@@ -1,0 +1,7 @@
+__title__ = 'python_data_utils'
+__version__ = '0.1.0'
+__summary__ = '🚀 Utility classes and functions for common data science libraries'
+__uri__ = 'https://github.com/surajiyer/python-data-utils'
+__author__ = 'Suraj Iyer'
+__email__ = 'me@surajiyer.com'
+__license__ = 'MIT'
